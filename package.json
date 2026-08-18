@@ -1,0 +1,20 @@
+{
+  "name": "@marx2/contracts",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Portfoliost API contract — OpenAPI spec shared by frontend and backend",
+  "main": "./openapi.yaml",
+  "exports": {
+    ".": "./openapi.yaml",
+    "./openapi.yaml": "./openapi.yaml"
+  },
+  "files": [
+    "openapi.yaml"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Marx2/portfoliost-contracts.git"
+  },
+  "license": "UNLICENSED",
+  "private": false
+}
