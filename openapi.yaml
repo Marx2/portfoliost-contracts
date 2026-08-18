@@ -401,6 +401,16 @@ components:
         phone: { type: string, nullable: true }
         shareOutstanding: { type: number, nullable: true }
         weburl: { type: string, nullable: true }
+        description: { type: string, nullable: true }
+        gicsSector: { type: string, nullable: true }
+        gicsIndustryGroup: { type: string, nullable: true }
+        gicsIndustry: { type: string, nullable: true }
+        gicsSubIndustry: { type: string, nullable: true }
+        address: { type: string, nullable: true }
+        city: { type: string, nullable: true }
+        state: { type: string, nullable: true }
+        employeeTotal: { type: number, nullable: true }
+        ceo: { type: string, nullable: true }
     InstrumentMetrics:
       type: object
       properties:
@@ -420,15 +430,72 @@ components:
             targetMedian: { type: number }
             numberAnalysts: { type: integer }
             lastUpdated: { type: string }
-        trailingValuation: { type: object, additionalProperties: true }
-        margins: { type: object, additionalProperties: true }
-        capitalEfficiency: { type: object, additionalProperties: true }
-        financialHealth: { type: object, additionalProperties: true }
-        perShare: { type: object, additionalProperties: true }
+        trailingValuation:
+          type: object
+          properties:
+            marketCap: { type: number }
+            enterpriseValue: { type: number }
+            peRatio: { type: number }
+            psRatio: { type: number }
+            pbRatio: { type: number }
+            evToSales: { type: number }
+            evToEBITDA: { type: number }
+            dividendYield: { type: number }
+            dividendPerShare: { type: number }
+            payoutRatio: { type: number }
+            pegRatio: { type: number }
+            priceTarget: { type: number }
+            dpsGrowth5yr: { type: number }
+            priceToFcf: { type: number }
+            evToGrossProfit: { type: number }
+        margins:
+          type: object
+          properties:
+            grossMargin: { type: number }
+            operatingMargin: { type: number }
+            ebitdaMargin: { type: number }
+            netProfitMargin: { type: number }
+        capitalEfficiency:
+          type: object
+          properties:
+            returnOnAssets: { type: number }
+            returnOnTotalAssets: { type: number }
+            returnOnEquity: { type: number }
+            assetTurnover: { type: number }
+            inventoryTurnover: { type: number }
+        financialHealth:
+          type: object
+          properties:
+            currentRatio: { type: number }
+            quickRatio: { type: number }
+        perShare:
+          type: object
+          properties:
+            revenuePerShare: { type: number }
+            eps: { type: number }
+            bookValuePerShare: { type: number }
+            tangibleBookValuePerShare: { type: number }
+            cashPerShare: { type: number }
+            operatingCashFlowPerShare: { type: number }
     InstrumentOverviewMetrics:
       type: object
-      additionalProperties: true
-      description: Flat financial metrics keyed by metric name (roa, roe, peRatio, ...)
+      properties:
+        symbol: { type: string }
+        marketCap: { type: number }
+        enterpriseValue: { type: number }
+        sharesOutstanding: { type: number }
+        revenue: { type: number }
+        employees: { type: number }
+        cash: { type: number }
+        netDebt: { type: number }
+        revenueGrowth3yr: { type: number }
+        revenueGrowth5yr: { type: number }
+        revenueGrowth10yr: { type: number }
+        epsGrowth3yr: { type: number }
+        epsGrowth5yr: { type: number }
+        epsGrowth10yr: { type: number }
+        revenueGrowthFwd: { type: number }
+        epsGrowthFwd: { type: number }
     Quote:
       type: object
       required: [symbol, currentPrice, highPrice, lowPrice, openPrice, previousClose, change, percentChange, timestamp, marketSession, timezone, bid, ask, bidSize, askSize, currency, regularMarketPrice, extendedHoursChange, extendedHoursChangePercent, marketSessionPhase, source, asOf]
@@ -457,6 +524,7 @@ components:
         asOf: { type: integer }
     PriceHistory:
       type: object
+      required: [symbol, closePrices, highPrices, lowPrices, openPrices, volumes, timestamps, status, currency]
       properties:
         symbol: { type: string }
         closePrices: { type: array, items: { type: number } }
@@ -482,6 +550,7 @@ components:
         results: { type: array, items: { $ref: '#/components/schemas/SearchResult' } }
     FundamentalsData:
       type: object
+      required: [financialHighlights]
       properties:
         financialHighlights:
           type: object
@@ -562,6 +631,7 @@ components:
               filingDate: { type: string }
     HoldingGroup:
       type: object
+      required: [date, holdingPercentage, holdersCount, sumOfCurrentPositions, sumOfCurrentPositionsValue]
       properties:
         date: { type: string }
         holdingPercentage: { type: number }
@@ -575,6 +645,7 @@ components:
           type: array
           items:
             type: object
+            required: [date, year, amount, currency, type]
             properties:
               date: { type: string }
               year: { type: integer }
@@ -588,6 +659,7 @@ components:
           type: array
           items:
             type: object
+            required: [date]
             properties:
               date: { type: string }
               title: { type: string }
@@ -597,6 +669,7 @@ components:
           type: array
           items:
             type: object
+            required: [date]
             properties:
               date: { type: string }
               title: { type: string }
@@ -606,11 +679,38 @@ components:
           type: array
           items:
             type: object
+            required: [date]
             properties:
               date: { type: string }
               title: { type: string }
               year: { type: integer }
               amount: { type: number }
+        upcoming:
+          type: array
+          items:
+            type: object
+            required: [date, type]
+            properties:
+              symbol: { type: string }
+              companyName: { type: string }
+              type: { type: string }
+              date: { type: string }
+              title: { type: string }
+              amount: { type: number, nullable: true }
+              quarter: { type: integer, nullable: true }
+        past:
+          type: array
+          items:
+            type: object
+            required: [date, type]
+            properties:
+              symbol: { type: string }
+              companyName: { type: string }
+              type: { type: string }
+              date: { type: string }
+              title: { type: string }
+              amount: { type: number, nullable: true }
+              quarter: { type: integer, nullable: true }
     SeasonalityData:
       type: object
       properties:
@@ -621,6 +721,7 @@ components:
           type: array
           items:
             type: object
+            required: [month, return_pct]
             properties:
               month: { type: string }
               return_pct: { type: number }
@@ -706,8 +807,27 @@ components:
         transcript: { type: array, items: { type: object } }
     ResearchCompare:
       type: object
-      additionalProperties: true
-      description: Flat metrics object keyed by metric name (peRatio, revenue, marketCap, ...)
+      properties:
+        symbol: { type: string }
+        name: { type: string }
+        price: { type: number }
+        marketCap: { type: number }
+        peRatio: { type: number }
+        forwardPe: { type: number }
+        pbRatio: { type: number }
+        psRatio: { type: number }
+        dividendYield: { type: number }
+        revenueGrowth: { type: number }
+        netMargin: { type: number }
+        roe: { type: number }
+        grossMargin: { type: number }
+        operatingMargin: { type: number }
+        evToEbitda: { type: number }
+        evToSales: { type: number }
+        fcfMargin: { type: number }
+        netIncome: { type: number }
+        revenue: { type: number }
+        currency: { type: string }
 
     # ─── Charting ──────────────────────────────────────────────
     ChartingPreset:
@@ -719,7 +839,32 @@ components:
         metric: { type: string }
     CompareRow:
       type: object
-      additionalProperties: true
+      properties:
+        symbol: { type: string }
+        name: { type: string }
+        sector: { type: string }
+        country: { type: string }
+        value: { type: number }
+        price: { type: number }
+        changePercent: { type: number }
+        marketCap: { type: number }
+        peRatio: { type: number }
+        forwardPe: { type: number }
+        pbRatio: { type: number }
+        psRatio: { type: number }
+        dividendYield: { type: number }
+        revenueGrowth: { type: number }
+        netMargin: { type: number }
+        roe: { type: number }
+        grossMargin: { type: number }
+        operatingMargin: { type: number }
+        evToEbitda: { type: number }
+        evToSales: { type: number }
+        fcfMargin: { type: number }
+        netIncome: { type: number }
+        revenue: { type: number }
+        weight: { type: number }
+        currency: { type: string }
 
     # ─── Portfolios ────────────────────────────────────────────
     Portfolio:
@@ -742,6 +887,12 @@ components:
         maintenanceMarginRate: { type: number, nullable: true }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
+        metrics:
+          type: object
+          properties:
+            totalReturn: { type: number }
+            openPositions: { type: integer }
+            unrealizedGainLoss: { type: number }
     CreatePortfolioRequest:
       type: object
       required: [name]
@@ -888,30 +1039,98 @@ components:
             maxDrawdown: { type: number }
             monthlyReturns:
               type: array
-              items: { type: object }
+              items:
+                type: object
+                properties:
+                  month: { type: string }
+                  returnPercent: { type: number }
             timeSeries:
-              type: object
-              additionalProperties: true
-              description: ISO date key → metric values
+              type: array
+              items:
+                type: object
+                properties:
+                  date: { type: string }
+                  value: { type: number }
         benchmarks:
           type: array
-          items: { type: object, additionalProperties: true }
+          items:
+            type: object
+            properties:
+              name: { type: string }
+              timeSeries:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    date: { type: string }
+                    value: { type: number }
         portfolioCurrency: { type: string }
         realizedGain: { type: number }
         monthlyReturns:
           type: array
-          items: { type: object }
+          items:
+            type: object
+            properties:
+              month: { type: string }
+              returnPercent: { type: number }
     PortfolioSnapshot:
       type: object
       properties:
         allocation:
           type: object
           properties:
-            byAsset: { type: array, items: { type: object } }
-            bySector: { type: array, items: { type: object } }
-            byGeography: { type: array, items: { type: object } }
-            byIndustry: { type: array, items: { type: object } }
-            byPosition: { type: array, items: { type: object } }
+            byAsset:
+              type: array
+              items:
+                type: object
+                properties:
+                  name: { type: string }
+                  value: { type: number }
+            bySector:
+              type: array
+              items:
+                type: object
+                properties:
+                  name: { type: string }
+                  value: { type: number }
+            byGeography:
+              type: array
+              items:
+                type: object
+                properties:
+                  name: { type: string }
+                  value: { type: number }
+            byIndustry:
+              type: array
+              items:
+                type: object
+                properties:
+                  name: { type: string }
+                  value: { type: number }
+            byPosition:
+              type: array
+              items:
+                type: object
+                properties:
+                  name: { type: string }
+                  value: { type: number }
+            byAssetType:
+              type: array
+              items:
+                type: object
+                properties:
+                  name: { type: string }
+                  value: { type: number }
+            byCurrency:
+              type: array
+              items:
+                type: object
+                properties:
+                  name: { type: string }
+                  value: { type: number }
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/CompareRow' }
         topPerformers: { type: array, items: { type: object } }
         bottomPerformers: { type: array, items: { type: object } }
         concentrationRisks: { type: array, items: { type: object } }
@@ -937,6 +1156,7 @@ components:
           properties:
             metrics:
               type: object
+              required: [totalReturn, totalReturnAmount, dayChange, dayChangeAmount, dayChangeDate, asOf, positionCount, openPositions, closedPositions, realizedGainLoss, unrealizedGainLoss, totalInvested, income, returnBasis]
               properties:
                 totalReturn: { type: number }
                 totalReturnAmount: { type: number }
@@ -1050,6 +1270,8 @@ components:
         convertedPrice: { type: number }
         convertedFees: { type: number }
         convertedRealizedGainLoss: { type: number, nullable: true }
+        sector: { type: string }
+        country: { type: string }
 
     # ─── Wallets ───────────────────────────────────────────────
     CashWallet:
