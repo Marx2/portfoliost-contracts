@@ -125,6 +125,12 @@ components:
         hasPrevious: { type: boolean }
 
     # ─── Auth ──────────────────────────────────────────────────
+    LoginPayload:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string }
     LoginRequest:
       type: object
       required: [email, password]
@@ -441,6 +447,9 @@ components:
         regularMarketPrice: { type: number }
         extendedHoursChange: { type: number }
         extendedHoursChangePercent: { type: number }
+        marketSessionPhase: { type: string }
+        source: { type: string }
+        asOf: { type: integer }
     PriceHistory:
       type: object
       properties:
@@ -690,7 +699,19 @@ components:
         participant: { type: array, items: { type: object } }
         audio: { type: string, nullable: true }
         transcript: { type: array, items: { type: object } }
+    ResearchCompare:
+      type: object
+      additionalProperties: true
+      description: Flat metrics object keyed by metric name (peRatio, revenue, marketCap, ...)
+
     # ─── Charting ──────────────────────────────────────────────
+    ChartingPreset:
+      type: object
+      properties:
+        name: { type: string }
+        description: { type: string }
+        symbols: { type: array, items: { type: string } }
+        metric: { type: string }
     CompareRow:
       type: object
       additionalProperties: true
@@ -775,7 +796,20 @@ components:
         createdAt: { type: string, format: date-time }
         expiresAt: { type: string, nullable: true }
         viewCount: { type: integer }
-        privacySettings: { type: object }
+        privacySettings:
+          type: object
+          properties:
+            showValues: { type: boolean }
+            showHoldings: { type: boolean }
+            showPositions: { type: boolean }
+            showPerformanceChart: { type: boolean }
+            showTransactionHistory: { type: boolean }
+            showAssetAllocation: { type: boolean }
+            showSectorDistribution: { type: boolean }
+            showGeographicBreakdown: { type: boolean }
+            showIndustryDistribution: { type: boolean }
+            performanceChartReturnType: { type: string }
+          additionalProperties: true
     Position:
       type: object
       properties:
@@ -888,6 +922,123 @@ components:
         annualizedReturn: { type: number, nullable: true }
         annualizedReturnWithheldReason: { type: string, nullable: true }
         moneyWeightedReturnWithheldReason: { type: string, nullable: true }
+    PortfolioDetail:
+      allOf:
+        - $ref: '#/components/schemas/Portfolio'
+        - type: object
+          properties:
+            metrics:
+              type: object
+              properties:
+                totalReturn: { type: number }
+                totalReturnAmount: { type: number }
+                dayChange: { type: number }
+                dayChangeAmount: { type: number }
+                dayChangeDate: { type: string }
+                asOf: { type: string, format: date-time }
+                positionCount: { type: integer }
+                openPositions: { type: integer }
+                closedPositions: { type: integer }
+                realizedGainLoss: { type: number }
+                unrealizedGainLoss: { type: number }
+                totalInvested: { type: number }
+                income: { type: number }
+                returnBasis: { type: number }
+                externalCapitalReturnPercent: { type: number, nullable: true }
+                externalCapitalReturnAmount: { type: number, nullable: true }
+                externalCapitalBasis: { type: number, nullable: true }
+                externalCapitalBasisSource: { type: string, nullable: true }
+                externalCapitalSuppressedReason: { type: string, nullable: true }
+                externalCapitalReturnBasisKind: { type: string, nullable: true }
+            positions:
+              type: array
+              items: { $ref: '#/components/schemas/PositionSummary' }
+    PositionSummary:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        portfolioId: { type: string, format: uuid }
+        symbol: { type: string }
+        assetType: { type: string }
+        quantity: { type: number }
+        avgCostBasis: { type: number }
+        totalCostBasis: { type: number }
+        currentPrice: { type: number }
+        marketValue: { type: number }
+        realizedGainLoss: { type: number }
+        unrealizedGainLoss: { type: number }
+        sector: { type: string }
+        industry: { type: string }
+        country: { type: string }
+        purchaseCurrency: { type: string }
+        stockCurrency: { type: string }
+        finnhubSecurityType: { type: string }
+        contractSize: { type: number }
+        isCfd: { type: boolean }
+        openedAt: { type: string, format: date-time }
+        closedAt: { type: string, nullable: true }
+        updatedAt: { type: string, format: date-time }
+        displayCurrency: { type: string }
+        instrumentAvgCostBasis: { type: number }
+    PortfolioSummaryMetrics:
+      type: object
+      properties:
+        totalValue: { type: number }
+        totalInvested: { type: number }
+        simpleReturnPercent: { type: number }
+        investmentReturnPercent: { type: number }
+        currencyImpactPercent: { type: number }
+        cumulativeDividends: { type: number }
+        totalDividends: { type: number }
+        positionValue: { type: number }
+        realizedGain: { type: number }
+        costBasis: { type: number }
+        unrealizedGainLoss: { type: number }
+        dayChangeAmount: { type: number }
+        dayChangePercent: { type: number }
+        dayChangeDate: { type: string, format: date-time }
+        externalCapitalReturnPercent: { type: number, nullable: true }
+        externalCapitalReturnAmount: { type: number, nullable: true }
+        externalCapitalBasis: { type: number, nullable: true }
+        externalCapitalBasisSource: { type: string, nullable: true }
+        externalCapitalSuppressedReason: { type: string, nullable: true }
+        externalCapitalReturnBasisKind: { type: string, nullable: true }
+        historyCoherence:
+          type: object
+          properties:
+            status: { type: string }
+            reason: { type: string, nullable: true }
+            affectedSymbolCount: { type: integer }
+            issues: { type: array, items: { type: object } }
+    Transaction:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        portfolioId: { type: string, format: uuid }
+        portfolioName: { type: string }
+        walletId: { type: string, format: uuid }
+        positionId: { type: string, format: uuid, nullable: true }
+        type: { type: string }
+        instrumentSymbol: { type: string }
+        instrumentName: { type: string }
+        quantity: { type: number }
+        price: { type: number }
+        fees: { type: number }
+        totalAmount: { type: number }
+        currency: { type: string }
+        priceCurrency: { type: string }
+        instrumentCurrency: { type: string }
+        assetType: { type: string }
+        exchangeRate: { type: number }
+        isGift: { type: boolean }
+        synthesizedOpeningLot: { type: boolean }
+        executedAt: { type: string, format: date-time }
+        createdAt: { type: string, format: date-time }
+        displayCurrency: { type: string }
+        convertedTotalAmount: { type: number }
+        convertedPrice: { type: number }
+        convertedFees: { type: number }
+        convertedRealizedGainLoss: { type: number, nullable: true }
 
     # ─── Wallets ───────────────────────────────────────────────
     CashWallet:
@@ -956,6 +1107,44 @@ components:
         status: { type: string }
         createdAt: { type: string, format: date-time }
         description: { type: string, nullable: true }
+        transaction_date: { type: string, nullable: true }
+        payment_method: { type: string, nullable: true }
+        fees: { type: number, nullable: true }
+        fees_type: { type: string, nullable: true }
+        to_wallet_id: { type: string, format: uuid, nullable: true }
+        new_balance: { type: number, nullable: true }
+        remaining_balance: { type: number, nullable: true }
+        walletName: { type: string, nullable: true }
+    RecentCashTransaction:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        walletId: { type: string, format: uuid }
+        walletName: { type: string, nullable: true }
+        type: { type: string }
+        displayLabel: { type: string }
+        amount: { type: string }
+        currency: { type: string }
+        exchangeRate: { type: number, nullable: true }
+        reference: { type: string, nullable: true }
+        date: { type: string }
+        description: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+        portfolioId: { type: string, format: uuid, nullable: true }
+        fees: { type: number, nullable: true }
+        taxes: { type: number, nullable: true }
+        isInternalTransfer: { type: boolean }
+    RecentCashTransactionsPage:
+      type: object
+      properties:
+        data: { type: array, items: { $ref: '#/components/schemas/RecentCashTransaction' } }
+        meta:
+          type: object
+          properties:
+            total: { type: integer }
+            page: { type: integer }
+            limit: { type: integer }
+            totalPages: { type: integer }
 
     # ─── Watchlists ────────────────────────────────────────────
     Watchlist:
@@ -1714,7 +1903,7 @@ paths:
           content:
             application/json:
               type: array
-              items: { type: object }
+              items: { $ref: '#/components/schemas/ChartingPreset' }
   /charting/compare:
     get:
       tags: [Charting]
@@ -1732,7 +1921,7 @@ paths:
           content:
             application/json:
               type: array
-              items: { $ref: '#/components/schemas/CompareRow' }
+              items: { $ref: '#/components/schemas/ResearchCompare' }
   # ─── Portfolios ──────────────────────────────────────────────
   /portfolios:
     get:
@@ -1859,18 +2048,31 @@ paths:
       parameters:
         - $ref: '#/components/parameters/page'
         - $ref: '#/components/parameters/limit'
+        - name: sortBy
+          in: query
+          schema: { type: string, default: date }
+        - name: sortOrder
+          in: query
+          schema: { type: string, enum: [asc, desc], default: desc }
       responses:
         '200':
           description: Transactions
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/PageResponse' }
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PageResponse'
+                  - type: object
+                    properties:
+                      items:
+                        type: array
+                        items: { $ref: '#/components/schemas/Transaction' }
   /portfolios/{id}:
     parameters:
       - $ref: '#/components/parameters/portfolioId'
     get:
       tags: [Portfolios]
-      summary: Portfolio detail
+      summary: Portfolio detail with inline positions and metrics
       operationId: getPortfolio
       security: [{ bearerAuth: [] }]
       responses:
@@ -1878,7 +2080,7 @@ paths:
           description: Portfolio
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/Portfolio' }
+              schema: { $ref: '#/components/schemas/PortfolioDetail' }
     patch:
       tags: [Portfolios]
       summary: Update portfolio
@@ -1893,7 +2095,7 @@ paths:
           description: Updated
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/Portfolio' }
+              schema: { $ref: '#/components/schemas/PortfolioDetail' }
     delete:
       tags: [Portfolios]
       summary: Delete portfolio
@@ -1915,7 +2117,7 @@ paths:
           description: Summary metrics
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/PortfolioTotalMetrics' }
+              schema: { $ref: '#/components/schemas/PortfolioSummaryMetrics' }
   /portfolios/{id}/analytics:
     parameters:
       - $ref: '#/components/parameters/portfolioId'
@@ -2041,12 +2243,22 @@ paths:
         - name: type
           in: query
           schema: { type: string }
+        - name: positionId
+          in: query
+          schema: { type: string, format: uuid }
       responses:
         '200':
           description: Transactions
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/PageResponse' }
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PageResponse'
+                  - type: object
+                    properties:
+                      items:
+                        type: array
+                        items: { $ref: '#/components/schemas/Transaction' }
     post:
       tags: [Portfolios]
       summary: Record transaction
@@ -2057,13 +2269,18 @@ paths:
           application/json:
             schema:
               type: object
-              additionalProperties: true
+              properties:
+                type: { type: string }
+                symbol: { type: string }
+                quantity: { type: number }
+                price: { type: number }
+                currency: { type: string }
       responses:
         '201':
           description: Created
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/PageResponse' }
+              schema: { $ref: '#/components/schemas/Transaction' }
   /portfolios/{id}/transactions/export:
     parameters:
       - $ref: '#/components/parameters/portfolioId'
@@ -2112,6 +2329,76 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/PortfolioRiskMetrics' }
+  /portfolios/{id}/allocation:
+    parameters:
+      - $ref: '#/components/parameters/portfolioId'
+    get:
+      tags: [Portfolios]
+      summary: Portfolio asset allocation breakdown
+      operationId: getPortfolioAllocation
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Allocation
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PortfolioSnapshot' }
+  /portfolios/{id}/dividends:
+    parameters:
+      - $ref: '#/components/parameters/portfolioId'
+    get:
+      tags: [Portfolios]
+      summary: Portfolio dividend history
+      operationId: getPortfolioDividends
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Dividends
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DividendsData' }
+  /portfolios/{id}/calendar:
+    parameters:
+      - $ref: '#/components/parameters/portfolioId'
+    get:
+      tags: [Portfolios]
+      summary: Portfolio earnings and dividend calendar
+      operationId: getPortfolioCalendar
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Calendar
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CalendarData' }
+  /portfolios/{id}/news:
+    parameters:
+      - $ref: '#/components/parameters/portfolioId'
+    get:
+      tags: [Portfolios]
+      summary: News for portfolio holdings
+      operationId: getPortfolioNews
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: News
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/NewsArticleList' }
+  /portfolios/{id}/compare:
+    parameters:
+      - $ref: '#/components/parameters/portfolioId'
+    get:
+      tags: [Portfolios]
+      summary: Compare portfolio positions
+      operationId: getPortfolioCompare
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Compare
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PortfolioSnapshot' }
 
   # ─── Wallets ─────────────────────────────────────────────────
   /wallets:
@@ -2235,8 +2522,62 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/PageResponse' }
-
-  # ─── Watchlists ──────────────────────────────────────────────
+  /wallets/recent-transactions:
+    get:
+      tags: [Wallets]
+      summary: Recent cash transactions across all wallets
+      operationId: getRecentCashTransactions
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/limit'
+        - name: sortBy
+          in: query
+          schema: { type: string, default: date }
+        - name: sortOrder
+          in: query
+          schema: { type: string, enum: [asc, desc], default: desc }
+      responses:
+        '200':
+          description: Recent transactions
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RecentCashTransactionsPage' }
+  /wallets/transactions/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    patch:
+      tags: [Wallets]
+      summary: Update a cash transaction
+      operationId: updateCashTransaction
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                type: { type: string }
+                amount: { type: number }
+                description: { type: string }
+                date: { type: string }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RecentCashTransaction' }
+    delete:
+      tags: [Wallets]
+      summary: Delete a cash transaction
+      operationId: deleteCashTransaction
+      security: [{ bearerAuth: [] }]
+      responses:
+        '204':
+          description: Deleted
   /watchlists:
     get:
       tags: [Watchlists]
