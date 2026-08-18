@@ -139,6 +139,7 @@ components:
         password: { type: string }
     AuthResponse:
       type: object
+      required: [access_token, token_type, user]
       properties:
         access_token: { type: string }
         token_type: { type: string, default: bearer }
@@ -147,6 +148,7 @@ components:
           $ref: '#/components/schemas/AuthUser'
     AuthUser:
       type: object
+      required: [id, email, language, role, isDemoUser, createdAt, updatedAt]
       properties:
         id: { type: string, format: uuid }
         email: { type: string }
@@ -158,6 +160,7 @@ components:
         lastLoginAt: { type: string, format: date-time, nullable: true }
     MeResponse:
       type: object
+      required: [user]
       properties:
         user:
           $ref: '#/components/schemas/AuthUser'
@@ -165,6 +168,7 @@ components:
     # ─── Users ─────────────────────────────────────────────────
     UserProfile:
       type: object
+      required: [id, email, language, createdAt, updatedAt, isDemoUser]
       properties:
         id: { type: string, format: uuid }
         email: { type: string }
@@ -427,6 +431,7 @@ components:
       description: Flat financial metrics keyed by metric name (roa, roe, peRatio, ...)
     Quote:
       type: object
+      required: [symbol, currentPrice, highPrice, lowPrice, openPrice, previousClose, change, percentChange, timestamp, marketSession, timezone, bid, ask, bidSize, askSize, currency, regularMarketPrice, extendedHoursChange, extendedHoursChangePercent, marketSessionPhase, source, asOf]
       properties:
         symbol: { type: string }
         currentPrice: { type: number }
@@ -719,6 +724,7 @@ components:
     # ─── Portfolios ────────────────────────────────────────────
     Portfolio:
       type: object
+      required: [id, userId, name, strategy, type, currency, walletId, totalInvested, currentValue, isPublic, isMarginEnabled, createdAt, updatedAt]
       properties:
         id: { type: string, format: uuid }
         userId: { type: string, format: uuid }
@@ -788,6 +794,7 @@ components:
         totalCount: { type: integer }
     PortfolioShare:
       type: object
+      required: [id, portfolioId, portfolioName, createdAt, viewCount, privacySettings]
       properties:
         id: { type: string, format: uuid }
         portfolioId: { type: string, format: uuid }
@@ -812,6 +819,7 @@ components:
           additionalProperties: true
     Position:
       type: object
+      required: [id, portfolioId, symbol, companyName, assetType, purchaseCurrency, instrumentCurrency, quantity, avgCostBasis, totalCostBasis, costBasis, realizedGainLoss, sector, industry, country, isOpen, openedAt, currentPrice, priceSource, priceAsOf, marketValue, unrealizedGainLoss, percentageChange, percentOfPortfolio, dayChange, dayChangePercent, displayCurrency]
       properties:
         id: { type: string, format: uuid }
         portfolioId: { type: string, format: uuid }
@@ -955,6 +963,7 @@ components:
               items: { $ref: '#/components/schemas/PositionSummary' }
     PositionSummary:
       type: object
+      required: [id, portfolioId, symbol, assetType, quantity, avgCostBasis, totalCostBasis, currentPrice, marketValue, realizedGainLoss, unrealizedGainLoss, sector, industry, country, purchaseCurrency, stockCurrency, contractSize, isCfd, displayCurrency, instrumentAvgCostBasis]
       properties:
         id: { type: string, format: uuid }
         portfolioId: { type: string, format: uuid }
@@ -982,6 +991,7 @@ components:
         instrumentAvgCostBasis: { type: number }
     PortfolioSummaryMetrics:
       type: object
+      required: [totalValue, totalInvested, simpleReturnPercent, investmentReturnPercent, currencyImpactPercent, cumulativeDividends, totalDividends, positionValue, realizedGain, costBasis, unrealizedGainLoss, dayChangeAmount, dayChangePercent, dayChangeDate]
       properties:
         totalValue: { type: number }
         totalInvested: { type: number }
@@ -1012,6 +1022,7 @@ components:
             issues: { type: array, items: { type: object } }
     Transaction:
       type: object
+      required: [id, portfolioId, portfolioName, walletId, type, instrumentSymbol, instrumentName, quantity, price, fees, totalAmount, currency, priceCurrency, instrumentCurrency, assetType, exchangeRate, isGift, synthesizedOpeningLot, executedAt, createdAt, displayCurrency, convertedTotalAmount, convertedPrice, convertedFees]
       properties:
         id: { type: string, format: uuid }
         portfolioId: { type: string, format: uuid }
@@ -1043,6 +1054,7 @@ components:
     # ─── Wallets ───────────────────────────────────────────────
     CashWallet:
       type: object
+      required: [id, userId, name, currency, balance, availableBalance, isDefault, createdAt, updatedAt]
       properties:
         id: { type: string, format: uuid }
         userId: { type: string, format: uuid }
@@ -1072,11 +1084,13 @@ components:
               weight: { type: number }
     BalanceHistory:
       type: object
+      required: [data, meta]
       properties:
         data:
           type: array
           items:
             type: object
+            required: [date, balance, change, percentChange, high, low]
             properties:
               date: { type: string, format: date-time }
               balance: { type: number }
@@ -1086,6 +1100,7 @@ components:
               low: { type: number }
         meta:
           type: object
+          required: [period, resolution, high, low, average, startDate, endDate, change]
           properties:
             period: { type: string }
             resolution: { type: string }
@@ -1098,6 +1113,7 @@ components:
             percentChange: { type: number, nullable: true }
     CashTransaction:
       type: object
+      required: [id, walletId, type, amount, currency, status, createdAt]
       properties:
         id: { type: string, format: uuid }
         walletId: { type: string, format: uuid }
@@ -1117,6 +1133,7 @@ components:
         walletName: { type: string, nullable: true }
     RecentCashTransaction:
       type: object
+      required: [id, walletId, type, displayLabel, amount, currency, date, createdAt, isInternalTransfer]
       properties:
         id: { type: string, format: uuid }
         walletId: { type: string, format: uuid }
