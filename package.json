@@ -16,5 +16,5 @@
     "url": "https://github.com/Marx2/portfoliost-contracts.git"
   },
   "license": "UNLICENSED",
-  "private": false
+  "private": true
 }
