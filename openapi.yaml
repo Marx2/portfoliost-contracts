@@ -154,6 +154,10 @@ components:
         email: { type: string }
         language: { type: string }
         role: { type: string }
+        groups:
+          type: array
+          items: { type: string }
+          description: User's group memberships for authorization
         isDemoUser: { type: boolean }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
