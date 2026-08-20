@@ -172,12 +172,15 @@ components:
     # ─── Users ─────────────────────────────────────────────────
     UserProfile:
       type: object
-      required: [id, email, language, createdAt, updatedAt, isDemoUser]
+      required: [id, email, groups, language, createdAt, updatedAt, isDemoUser]
       properties:
         id: { type: string, format: uuid }
         email: { type: string }
         firstName: { type: string, nullable: true }
         lastName: { type: string, nullable: true }
+        groups:
+          type: array
+          items: { type: string }
         language: { type: string }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
