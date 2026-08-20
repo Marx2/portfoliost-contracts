@@ -158,6 +158,7 @@ components:
           type: array
           items: { type: string }
           description: User's group memberships for authorization
+        avatarUrl: { type: string, format: uri, nullable: true, description: "URL to user's avatar image from identity provider" }
         isDemoUser: { type: boolean }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
@@ -178,6 +179,7 @@ components:
         email: { type: string }
         firstName: { type: string, nullable: true }
         lastName: { type: string, nullable: true }
+        avatarUrl: { type: string, format: uri, nullable: true, description: "URL to user's avatar image from identity provider" }
         groups:
           type: array
           items: { type: string }
