@@ -1298,6 +1298,7 @@ components:
             by the system at write time.
         rateSource:
           type: string
+          nullable: true
           enum: [automatic, manual]
           default: automatic
         feeCurrency:
@@ -1306,6 +1307,7 @@ components:
           description: ISO 4217; defaults to the transaction currency when omitted.
         feeRateSource:
           type: string
+          nullable: true
           enum: [automatic, manual]
           default: automatic
         feeExchangeRate:
@@ -1486,8 +1488,8 @@ components:
         taxes: { type: number, nullable: true }
         isInternalTransfer: { type: boolean }
         feeCurrency: { type: string, nullable: true }
-        rateSource: { type: string, enum: [automatic, manual], default: automatic }
-        feeRateSource: { type: string, enum: [automatic, manual], default: automatic }
+        rateSource: { type: string, nullable: true, enum: [automatic, manual], default: automatic }
+        feeRateSource: { type: string, nullable: true, enum: [automatic, manual], default: automatic }
         feeExchangeRate: { type: number, nullable: true }
     RecentCashTransactionsPage:
       type: object
