@@ -399,6 +399,8 @@ components:
         ticker: { type: string }
         name: { type: string }
         country: { type: string }
+        countryCode: { type: string, nullable: true }
+        isin: { type: string, nullable: true }
         currency: { type: string }
         exchange: { type: string }
         finnhubIndustry: { type: string, nullable: true }
