@@ -1252,37 +1252,135 @@ components:
             affectedSymbolCount: { type: integer }
             issues: { type: array, items: { type: object } }
     Transaction:
+      allOf:
+        - $ref: '#/components/schemas/FeeFxFields'
+        - type: object
+          required: [id, portfolioId, portfolioName, walletId, type, instrumentSymbol, instrumentName, quantity, price, fees, totalAmount, currency, priceCurrency, instrumentCurrency, assetType, isGift, synthesizedOpeningLot, executedAt, createdAt, displayCurrency, convertedTotalAmount, convertedPrice, convertedFees]
+          properties:
+            id: { type: string, format: uuid }
+            portfolioId: { type: string, format: uuid }
+            portfolioName: { type: string }
+            walletId: { type: string, format: uuid }
+            positionId: { type: string, format: uuid, nullable: true }
+            type: { type: string }
+            instrumentSymbol: { type: string }
+            instrumentName: { type: string }
+            quantity: { type: number }
+            price: { type: number }
+            fees: { type: number }
+            totalAmount: { type: number }
+            currency: { type: string }
+            priceCurrency: { type: string }
+            instrumentCurrency: { type: string }
+            assetType: { type: string }
+            isGift: { type: boolean }
+            synthesizedOpeningLot: { type: boolean }
+            executedAt: { type: string, format: date-time }
+            createdAt: { type: string, format: date-time }
+            displayCurrency: { type: string }
+            convertedTotalAmount: { type: number }
+            convertedPrice: { type: number }
+            convertedFees: { type: number }
+            convertedRealizedGainLoss: { type: number, nullable: true }
+            sector: { type: string }
+            country: { type: string }
+
+    # ─── Fees & FX (fees-and-custom-fx proposal D27–D31) ──────
+    FeeFxFields:
       type: object
-      required: [id, portfolioId, portfolioName, walletId, type, instrumentSymbol, instrumentName, quantity, price, fees, totalAmount, currency, priceCurrency, instrumentCurrency, assetType, exchangeRate, isGift, synthesizedOpeningLot, executedAt, createdAt, displayCurrency, convertedTotalAmount, convertedPrice, convertedFees]
       properties:
-        id: { type: string, format: uuid }
-        portfolioId: { type: string, format: uuid }
-        portfolioName: { type: string }
-        walletId: { type: string, format: uuid }
-        positionId: { type: string, format: uuid, nullable: true }
-        type: { type: string }
-        instrumentSymbol: { type: string }
-        instrumentName: { type: string }
-        quantity: { type: number }
-        price: { type: number }
-        fees: { type: number }
-        totalAmount: { type: number }
-        currency: { type: string }
-        priceCurrency: { type: string }
-        instrumentCurrency: { type: string }
-        assetType: { type: string }
-        exchangeRate: { type: number }
-        isGift: { type: boolean }
-        synthesizedOpeningLot: { type: boolean }
-        executedAt: { type: string, format: date-time }
-        createdAt: { type: string, format: date-time }
-        displayCurrency: { type: string }
-        convertedTotalAmount: { type: number }
-        convertedPrice: { type: number }
-        convertedFees: { type: number }
-        convertedRealizedGainLoss: { type: number, nullable: true }
-        sector: { type: string }
-        country: { type: string }
+        exchangeRate:
+          type: number
+          nullable: true
+          description: >-
+            Transaction-currency -> display/base-currency rate. Null when rates
+            equal. Manual values are user-provided truth; automatic are resolved
+            by the system at write time.
+        rateSource:
+          type: string
+          enum: [automatic, manual]
+          default: automatic
+        feeCurrency:
+          type: string
+          nullable: true
+          description: ISO 4217; defaults to the transaction currency when omitted.
+        feeRateSource:
+          type: string
+          enum: [automatic, manual]
+          default: automatic
+        feeExchangeRate:
+          type: number
+          nullable: true
+          description: Fee-currency -> transaction/wallet-currency rate for settlement.
+    CreateTransactionRequest:
+      type: object
+      allOf:
+        - $ref: '#/components/schemas/FeeFxFields'
+        - type: object
+          properties:
+            type: { type: string }
+            symbol: { type: string }
+            quantity: { type: number }
+            price: { type: number }
+            priceCurrency: { type: string }
+            currency: { type: string }
+            fees: { type: number }
+            feesType: { type: string, enum: [fixed, pct] }
+            executedAt: { type: string, format: date-time }
+            walletId: { type: string, format: uuid }
+    DepositRequest:
+      allOf:
+        - $ref: '#/components/schemas/FeeFxFields'
+        - type: object
+          properties:
+            amount: { type: number }
+            currency: { type: string }
+            description: { type: string }
+            transaction_date: { type: string }
+            fees: { type: number }
+            fees_type: { type: string, enum: [fixed, pct] }
+    WithdrawRequest:
+      allOf:
+        - $ref: '#/components/schemas/FeeFxFields'
+        - type: object
+          properties:
+            amount: { type: number }
+            currency: { type: string }
+            description: { type: string }
+            transaction_date: { type: string }
+            payment_method: { type: string }
+            fees: { type: number }
+            fees_type: { type: string, enum: [fixed, pct] }
+    TransferRequest:
+      allOf:
+        - $ref: '#/components/schemas/FeeFxFields'
+        - type: object
+          properties:
+            amount: { type: number }
+            currency: { type: string }
+            description: { type: string }
+            transfer_date: { type: string }
+            to_wallet_id: { type: string, format: uuid }
+            fees: { type: number }
+            fees_type: { type: string, enum: [fixed, pct] }
+            targetAmount: { type: number, nullable: true }
+            targetFxRate: { type: number, nullable: true }
+    CurrencyInfo:
+      type: object
+      required: [code, name, minorUnits, popular]
+      properties:
+        code: { type: string, description: ISO 4217 code }
+        name: { type: string }
+        symbol: { type: string }
+        minorUnits: { type: integer }
+        popular: { type: boolean }
+    CurrenciesResponse:
+      type: object
+      required: [currencies]
+      properties:
+        currencies:
+          type: array
+          items: { $ref: '#/components/schemas/CurrencyInfo' }
 
     # ─── Wallets ───────────────────────────────────────────────
     CashWallet:
@@ -1345,25 +1443,28 @@ components:
             change: { type: number }
             percentChange: { type: number, nullable: true }
     CashTransaction:
-      type: object
-      required: [id, walletId, type, amount, currency, status, createdAt]
-      properties:
-        id: { type: string, format: uuid }
-        walletId: { type: string, format: uuid }
-        type: { type: string }
-        amount: { type: number }
-        currency: { type: string }
-        status: { type: string }
-        createdAt: { type: string, format: date-time }
-        description: { type: string, nullable: true }
-        transaction_date: { type: string, nullable: true }
-        payment_method: { type: string, nullable: true }
-        fees: { type: number, nullable: true }
-        fees_type: { type: string, nullable: true }
-        to_wallet_id: { type: string, format: uuid, nullable: true }
-        new_balance: { type: number, nullable: true }
-        remaining_balance: { type: number, nullable: true }
-        walletName: { type: string, nullable: true }
+      allOf:
+        - $ref: '#/components/schemas/FeeFxFields'
+        - type: object
+          required: [id, walletId, type, amount, currency, status, createdAt]
+          properties:
+            id: { type: string, format: uuid }
+            walletId: { type: string, format: uuid }
+            type: { type: string }
+            amount: { type: number }
+            currency: { type: string }
+            status: { type: string }
+            createdAt: { type: string, format: date-time }
+            description: { type: string, nullable: true }
+            transaction_date: { type: string, nullable: true }
+            payment_method: { type: string, nullable: true }
+            fees: { type: number, nullable: true }
+            fees_type: { type: string, nullable: true }
+            to_wallet_id: { type: string, format: uuid, nullable: true }
+            new_balance: { type: number, nullable: true }
+            remaining_balance: { type: number, nullable: true }
+            walletName: { type: string, nullable: true }
+
     RecentCashTransaction:
       type: object
       required: [id, walletId, type, displayLabel, amount, currency, date, createdAt, isInternalTransfer]
@@ -1384,6 +1485,10 @@ components:
         fees: { type: number, nullable: true }
         taxes: { type: number, nullable: true }
         isInternalTransfer: { type: boolean }
+        feeCurrency: { type: string, nullable: true }
+        rateSource: { type: string, enum: [automatic, manual], default: automatic }
+        feeRateSource: { type: string, enum: [automatic, manual], default: automatic }
+        feeExchangeRate: { type: number, nullable: true }
     RecentCashTransactionsPage:
       type: object
       properties:
@@ -2515,16 +2620,10 @@ paths:
       operationId: createTransaction
       security: [{ bearerAuth: [] }]
       requestBody:
+        required: true
         content:
           application/json:
-            schema:
-              type: object
-              properties:
-                type: { type: string }
-                symbol: { type: string }
-                quantity: { type: number }
-                price: { type: number }
-                currency: { type: string }
+            schema: { $ref: '#/components/schemas/CreateTransactionRequest' }
       responses:
         '201':
           description: Created
@@ -2651,6 +2750,18 @@ paths:
               schema: { $ref: '#/components/schemas/PortfolioSnapshot' }
 
   # ─── Wallets ─────────────────────────────────────────────────
+  /currencies:
+    get:
+      tags: [Misc]
+      summary: Available currencies (auto-updated from FX imports)
+      operationId: listCurrencies
+      responses:
+        '200':
+          description: Supported currencies
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CurrenciesResponse' }
+
   /wallets:
     get:
       tags: [Wallets]
@@ -2724,6 +2835,11 @@ paths:
       summary: Deposit cash
       operationId: depositCash
       security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DepositRequest' }
       responses:
         '201':
           description: Deposited
@@ -2738,6 +2854,11 @@ paths:
       summary: Withdraw cash
       operationId: withdrawCash
       security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/WithdrawRequest' }
       responses:
         '201':
           description: Withdrawn
@@ -2752,6 +2873,11 @@ paths:
       summary: Transfer between wallets
       operationId: transferCash
       security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TransferRequest' }
       responses:
         '201':
           description: Transferred

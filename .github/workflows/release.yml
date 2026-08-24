@@ -56,3 +56,13 @@ jobs:
       - name: Validate OpenAPI spec parses
         run: |
           python3 -c "import yaml; yaml.safe_load(open('openapi.yaml')); print('openapi.yaml parses OK')"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install, test and build TS helpers
+        run: |
+          npm install --no-audit --no-fund
+          npm test
+          npm run build
