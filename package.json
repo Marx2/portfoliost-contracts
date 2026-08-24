@@ -6,15 +6,35 @@
   "main": "./openapi.yaml",
   "exports": {
     ".": "./openapi.yaml",
-    "./openapi.yaml": "./openapi.yaml"
+    "./openapi.yaml": "./openapi.yaml",
+    "./fx": {
+      "types": "./dist/fx.d.ts",
+      "default": "./dist/fx.js"
+    },
+    "./currencies": {
+      "types": "./dist/currencies.d.ts",
+      "default": "./dist/currencies.js"
+    }
   },
   "files": [
-    "openapi.yaml"
+    "openapi.yaml",
+    "dist",
+    "src"
   ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "lint": "python3 -c \"import yaml; yaml.safe_load(open('openapi.yaml')); print('openapi.yaml parses OK')\""
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/Marx2/portfoliost-contracts.git"
   },
   "license": "UNLICENSED",
-  "private": true
+  "private": true,
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.5.0",
+    "vitest": "^2.1.0"
+  }
 }
