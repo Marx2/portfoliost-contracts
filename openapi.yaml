@@ -26,6 +26,8 @@ tags:
   - name: Watchlists
   - name: Copilot
   - name: Misc
+  - name: Admin
+    description: Admin panel APIs (requires portfoliost_admin group)
 
 components:
   securitySchemes:
@@ -1554,6 +1556,109 @@ components:
       properties:
         isRegistered: { type: boolean }
         connectionsCount: { type: integer }
+
+    # ── Admin: Jobs (N — stooq zip import) ──────────────────────────────────
+
+    StooqDataset:
+      type: string
+      description: Identifies a stooq bulk-download dataset (region + timeframe)
+      enum:
+        - daily_world
+        - hourly_world
+        - 5min_world
+        - daily_us
+        - hourly_us
+        - 5min_us
+        - daily_uk
+        - hourly_uk
+        - 5min_uk
+        - daily_jp
+        - daily_hk
+        - hourly_hk
+        - 5min_hk
+        - daily_pl
+        - hourly_pl
+        - 5min_pl
+        - daily_hu
+        - hourly_hu
+        - 5min_hu
+        - daily_macro
+
+    StooqImportUploadResponse:
+      type: object
+      required: [uploadId, dataset, sizeBytes]
+      properties:
+        uploadId:
+          type: string
+          format: uuid
+        dataset:
+          $ref: '#/components/schemas/StooqDataset'
+        sizeBytes:
+          type: integer
+          description: Size of the uploaded file in bytes
+
+    StooqImportRunRequest:
+      type: object
+      required: [dataset, uploadId]
+      properties:
+        dataset:
+          $ref: '#/components/schemas/StooqDataset'
+        uploadId:
+          type: string
+          format: uuid
+
+    StooqImportRunResponse:
+      type: object
+      required: [jobName, namespace, status]
+      properties:
+        jobName:
+          type: string
+          description: Kubernetes Job name, e.g. stooq-importer-daily-us
+        namespace:
+          type: string
+        status:
+          type: string
+          enum: [Running, Succeeded, Failed, NotFound]
+
+    StooqImportStatusResponse:
+      type: object
+      required: [dataset, jobName, status]
+      properties:
+        dataset:
+          $ref: '#/components/schemas/StooqDataset'
+        jobName:
+          type: string
+        status:
+          type: string
+          enum: [Running, Succeeded, Failed, NotFound]
+        details:
+          type: object
+          properties:
+            active:    { type: integer }
+            succeeded: { type: integer }
+            failed:    { type: integer }
+
+    StooqImportLogEntry:
+      type: object
+      required: [dataset]
+      properties:
+        dataset:
+          $ref: '#/components/schemas/StooqDataset'
+        latestDate:
+          type: string
+          format: date
+          nullable: true
+          description: MAX(date) confirmed from foreign table after last import
+        importedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Timestamp of the last successful import hook call
+        rowsDeleted:
+          type: integer
+          nullable: true
+          description: Overflow rows cleaned up in the last run
+
 paths:
   # ─── Auth (custom mock) ──────────────────────────────────────
   /auth/login:
@@ -3099,3 +3204,110 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/SnapTradeStatus' }
+
+  # ── Admin: Jobs (N — stooq zip import) ──────────────────────────────────────
+
+  /admin/jobs/stooq-import/upload:
+    post:
+      tags: [Admin]
+      summary: Upload a stooq zip file for import
+      description: |
+        Streams a stooq bulk-download zip to the shared upload volume.
+        Returns an uploadId used to trigger the import job.
+        Maximum file size: 1 GB.
+      operationId: uploadStooqZip
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [dataset, file]
+              properties:
+                dataset:
+                  $ref: '#/components/schemas/StooqDataset'
+                file:
+                  type: string
+                  format: binary
+                  description: The stooq zip archive to import
+      responses:
+        '200':
+          description: Upload accepted
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StooqImportUploadResponse' }
+        '400':
+          description: Invalid dataset or file type
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '413':
+          description: File exceeds 1 GB limit
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  /admin/jobs/stooq-import/run:
+    post:
+      tags: [Admin]
+      summary: Trigger a stooq import Kubernetes Job
+      description: |
+        Creates a Kubernetes Job (via jobshot) that runs pgloader against the
+        previously uploaded zip file. The job is named stooq-importer-<dataset>.
+      operationId: runStooqImport
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/StooqImportRunRequest' }
+      responses:
+        '200':
+          description: Job started
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StooqImportRunResponse' }
+        '404':
+          description: Upload not found
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '409':
+          description: Import job already running
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  /admin/jobs/stooq-import/status:
+    get:
+      tags: [Admin]
+      summary: Get current status of a stooq import job
+      operationId: getStooqImportStatus
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: dataset
+          in: query
+          required: true
+          schema: { $ref: '#/components/schemas/StooqDataset' }
+      responses:
+        '200':
+          description: Job status
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StooqImportStatusResponse' }
+
+  /admin/jobs/stooq-import/log:
+    get:
+      tags: [Admin]
+      summary: Get last import log for all stooq datasets
+      operationId: getStooqImportLog
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: One entry per dataset
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/StooqImportLogEntry' }
