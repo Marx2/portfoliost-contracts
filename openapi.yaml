@@ -842,6 +842,7 @@ components:
         fcfMargin: { type: number }
         netIncome: { type: number }
         revenue: { type: number }
+        sharesOutstanding: { type: number }
         currency: { type: string }
 
     # ─── Charting ──────────────────────────────────────────────
