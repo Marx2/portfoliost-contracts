@@ -1659,6 +1659,46 @@ components:
           nullable: true
           description: Overflow rows cleaned up in the last run
 
+    AdminUser:
+      type: object
+      required: [id, groups, lastLogin, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: User's stable id (PocketID subject / portfoliost user id)
+        email: { type: string, format: email, nullable: true }
+        firstName: { type: string, nullable: true }
+        lastName: { type: string, nullable: true }
+        groups:
+          type: array
+          items: { type: string }
+          description: Group memberships for authorization
+        lastLogin:
+          type: string
+          format: date-time
+          nullable: true
+          description: Last successful authentication (null if never logged in)
+        createdAt:
+          type: string
+          format: date-time
+
+    AdminUserListResponse:
+      type: object
+      required: [items, pagination]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/AdminUser' }
+        pagination:
+          type: object
+          required: [total, page, per_page, total_pages]
+          properties:
+            total: { type: integer }
+            page: { type: integer }
+            per_page: { type: integer }
+            total_pages: { type: integer }
+
 paths:
   # ─── Auth (custom mock) ──────────────────────────────────────
   /auth/login:
@@ -3311,3 +3351,42 @@ paths:
               schema:
                 type: array
                 items: { $ref: '#/components/schemas/StooqImportLogEntry' }
+
+  /admin/users:
+    get:
+      tags: [Admin]
+      summary: List users with identity and access metadata
+      description: |
+        Returns users with access metadata (groups, last login) merged with
+        identity (email, name) resolved from the identity provider.
+      operationId: listAdminUsers
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: page
+          in: query
+          required: false
+          schema: { type: integer, default: 1 }
+        - name: per_page
+          in: query
+          required: false
+          schema: { type: integer, default: 50, maximum: 200 }
+        - name: search
+          in: query
+          required: false
+          schema: { type: string, description: Prefix-match on user id shape }
+      responses:
+        '200':
+          description: Paginated admin user list
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminUserListResponse' }
+        '401':
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '403':
+          description: Not a portfoliost_admin
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
