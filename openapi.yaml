@@ -400,7 +400,7 @@ components:
       properties:
         ticker: { type: string }
         name: { type: string }
-        country: { type: string }
+        country: { type: string, nullable: true }
         countryCode: { type: string, nullable: true }
         isin: { type: string, nullable: true }
         currency: { type: string }
@@ -498,7 +498,7 @@ components:
         enterpriseValue: { type: number }
         sharesOutstanding: { type: number }
         revenue: { type: number }
-        employees: { type: number }
+        employees: { type: number, nullable: true }
         cash: { type: number }
         netDebt: { type: number }
         revenueGrowth3yr: { type: number }
@@ -668,6 +668,7 @@ components:
     CalendarData:
       type: object
       properties:
+        currency: { type: string }
         earnings:
           type: array
           items:
@@ -737,7 +738,7 @@ components:
             required: [month, return_pct]
             properties:
               month: { type: string }
-              return_pct: { type: number }
+              return_pct: { type: number, nullable: true }
     EPSSurprises:
       type: object
       properties:
@@ -765,14 +766,15 @@ components:
     ProjectionsData:
       type: object
       properties:
+        currency: { type: string }
         priceTarget:
           type: object
           properties:
             lastUpdated: { type: string }
-            low: { type: number }
-            mean: { type: number }
-            current: { type: number }
-            high: { type: number }
+            low: { type: number, nullable: true }
+            mean: { type: number, nullable: true }
+            current: { type: number, nullable: true }
+            high: { type: number, nullable: true }
         recommendation:
           type: object
           properties:
@@ -811,10 +813,10 @@ components:
       properties:
         id: { type: string }
         symbol: { type: string }
-        year: { type: integer }
-        quarter: { type: integer }
+        year: { type: integer, nullable: true }
+        quarter: { type: integer, nullable: true }
         title: { type: string }
-        time: { type: string }
+        time: { type: string, nullable: true }
         participant: { type: array, items: { type: object } }
         audio: { type: string, nullable: true }
         transcript: { type: array, items: { type: object } }
