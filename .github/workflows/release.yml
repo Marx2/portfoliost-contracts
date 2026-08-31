@@ -1,8 +1,13 @@
 name: Release CI
 
-# Same release automation as the other pfire modules (auto version bump +
-# tag + GitHub Release on push to main), minus the Docker build — this repo
-# publishes an OpenAPI spec, not an image.
+# On every push to main:
+#   1. Read latest git tag (source of truth) → bump patch → new version
+#   2. Write new version into package.json (package.json always mirrors the tag)
+#   3. Build TS helpers, commit version bump + dist, push tag
+#   4. Create GitHub Release
+#   5. Publish to GitHub Packages (@marx2/contracts)
+#
+# On pull requests: validate only (no publish, no tag).
 
 on:
   push:
@@ -17,38 +22,67 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      packages: write
     outputs:
       version: ${{ steps.bump.outputs.version }}
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0          # need full history to read tags
+          fetch-depth: 0          # full history needed to read tags
 
-      - name: Determine next version
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://npm.pkg.github.com
+          scope: "@marx2"
+
+      - name: Bump patch from latest git tag
         id: bump
         run: |
+          # Latest semver tag is the source of truth; package.json is derived from it.
           LATEST=$(git tag --list 'v*' --sort=-version:refname | head -n1)
           if [ -z "$LATEST" ]; then
-            NEXT="v1.0.0"
+            NEXT="1.0.0"
           else
-            # Strip leading 'v', split on '.', increment patch
             IFS='.' read -r MAJOR MINOR PATCH <<< "${LATEST#v}"
-            NEXT="v${MAJOR}.${MINOR}.$((PATCH + 1))"
+            NEXT="${MAJOR}.${MINOR}.$((PATCH + 1))"
           fi
-          echo "version=$NEXT" >> "$GITHUB_OUTPUT"
+          echo "version=v${NEXT}" >> "$GITHUB_OUTPUT"
+          echo "plain=${NEXT}"    >> "$GITHUB_OUTPUT"
+          echo "Bumped ${LATEST:-none} → v${NEXT}"
 
-      - name: Create tag and GitHub Release
+      - name: Write version into package.json
+        run: |
+          # --no-git-tag-version: we handle the commit + tag ourselves below
+          npm version "${{ steps.bump.outputs.plain }}" --no-git-tag-version
+
+      - name: Install and build TS helpers
+        run: npm install --no-audit --no-fund && npm run build
+
+      - name: Commit, tag and push
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add package.json package-lock.json dist/
+          git commit -m "chore(release): ${{ steps.bump.outputs.version }}"
+          git tag "${{ steps.bump.outputs.version }}"
+          git push origin main --follow-tags
+
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.bump.outputs.version }}
           name: Release ${{ steps.bump.outputs.version }}
-          generate_release_notes: true   # auto-fills with commit messages
+          generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Publish to GitHub Packages
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   validate:
-    needs: release
-    if: always()
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
