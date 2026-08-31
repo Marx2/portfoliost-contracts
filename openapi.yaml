@@ -189,12 +189,22 @@ components:
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
         isDemoUser: { type: boolean }
+        recentSearches:
+          type: array
+          maxItems: 10
+          items: { type: string }
+          description: "User's last 10 searched stock symbols, most recent first"
     UpdateProfileRequest:
       type: object
       properties:
         firstName: { type: string, nullable: true }
         lastName: { type: string, nullable: true }
         language: { type: string }
+        recentSearches:
+          type: array
+          maxItems: 10
+          items: { type: string }
+          description: "User's last 10 searched stock symbols, most recent first"
     UserPreferences:
       type: object
       properties:
