@@ -31,7 +31,9 @@
     "url": "https://github.com/Marx2/portfoliost-contracts.git"
   },
   "license": "UNLICENSED",
-  "private": true,
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
   "devDependencies": {
     "@types/node": "^22.0.0",
     "typescript": "^5.5.0",
