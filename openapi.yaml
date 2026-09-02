@@ -807,6 +807,20 @@ components:
         date: { type: string, format: date }
         price: { type: number }
         currency: { type: string }
+    PriceBarSeries:
+      type: object
+      required: [symbol, timeframe, stale, dates, closes]
+      properties:
+        symbol: { type: string }
+        timeframe: { type: string }
+        stale: { type: boolean }
+        currency: { type: string, nullable: true }
+        dates:
+          type: array
+          items: { type: string, format: date }
+        closes:
+          type: array
+          items: { type: number }
     InvestorRelationEvent:
       type: object
       properties:
@@ -2365,6 +2379,29 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/HistoricalPrice' }
+  /instruments/{symbol}/price-bars:
+    parameters:
+      - $ref: '#/components/parameters/symbol'
+    get:
+      tags: [Instruments]
+      summary: Daily close-price series for a symbol over a date range (stooq + overflow)
+      operationId: getPriceBars
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: from
+          in: query
+          required: true
+          schema: { type: string, format: date }
+        - name: to
+          in: query
+          required: true
+          schema: { type: string, format: date }
+      responses:
+        '200':
+          description: Daily close-price series
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PriceBarSeries' }
   /instruments/{symbol}/investor-relations:
     parameters:
       - $ref: '#/components/parameters/symbol'
