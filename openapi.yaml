@@ -1684,6 +1684,38 @@ components:
           nullable: true
           description: Overflow rows cleaned up in the last run (written by post-import hook)
 
+    SplitCandidate:
+      type: object
+      required: [symbol, detectedAt, status]
+      description: Detected price discontinuity at the stooq/overflow boundary awaiting admin review.
+      properties:
+        symbol:            { type: string }
+        detectedAt:        { type: string, format: date }
+        lastStooqDate:     { type: string, format: date, nullable: true }
+        lastStooqClose:    { type: string, nullable: true }
+        firstOverflowDate: { type: string, format: date, nullable: true }
+        firstOverflowClose: { type: string, nullable: true }
+        ratio:             { type: string, nullable: true }
+        suggestedFactor:   { type: string, nullable: true }
+        suggestedRatio:    { type: string, nullable: true }
+        status:
+          type: string
+          enum: [pending, applied, dismissed]
+
+    OverflowSummary:
+      type: object
+      required: [total, topSymbols]
+      properties:
+        total: { type: integer }
+        topSymbols:
+          type: array
+          items:
+            type: object
+            required: [symbol, rowCount]
+            properties:
+              symbol:   { type: string }
+              rowCount: { type: integer }
+
     AdminUser:
       type: object
       required: [id, groups, lastLogin, createdAt]
@@ -3403,6 +3435,118 @@ paths:
               schema:
                 type: array
                 items: { $ref: '#/components/schemas/StooqImportLogEntry' }
+
+  /admin/market-data/split-candidates:
+    get:
+      tags: [Admin]
+      summary: List split candidates (pending first, then history)
+      operationId: listSplitCandidates
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Split candidates list
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/SplitCandidate' }
+
+  /admin/market-data/split-candidates/{symbol}/apply:
+    post:
+      tags: [Admin]
+      summary: Apply a split adjustment factor for a symbol
+      operationId: applySplitCandidate
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: symbol
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [factor]
+              properties:
+                factor: { type: number, description: "Split adjustment factor (e.g. 0.25 for 4:1)" }
+      responses:
+        '200':
+          description: Applied
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:         { type: boolean }
+                  symbol:     { type: string }
+                  factor:     { type: number }
+                  detectedAt: { type: string, format: date }
+
+  /admin/market-data/split-candidates/{symbol}/dismiss:
+    post:
+      tags: [Admin]
+      summary: Dismiss a pending split candidate
+      operationId: dismissSplitCandidate
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: symbol
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Dismissed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:     { type: boolean }
+                  symbol: { type: string }
+
+  /admin/market-data/overflow-summary:
+    get:
+      tags: [Admin]
+      summary: Summary of price_bars overflow table (total rows + top 10 symbols)
+      operationId: getOverflowSummary
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Overflow summary
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OverflowSummary' }
+
+  /instruments/{symbol}/internal/stooq-imported:
+    post:
+      tags: [Instruments]
+      summary: Post-import hook — clean overflow rows superseded by fresh stooq data
+      operationId: stooqImported
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [dataset, jobName]
+              properties:
+                dataset:
+                  $ref: '#/components/schemas/StooqDataset'
+                jobName: { type: string }
+      responses:
+        '200':
+          description: Cleanup result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  dataset:              { $ref: '#/components/schemas/StooqDataset' }
+                  latestDate:           { type: string, format: date, nullable: true }
+                  rowsDeleted:          { type: integer }
+                  candidatesDismissed:  { type: integer }
 
   /admin/users:
     get:
