@@ -1052,6 +1052,11 @@ components:
     PortfolioAnalytics:
       type: object
       properties:
+        backfillStatus:
+          type: string
+          enum: [pending, complete, failed]
+          nullable: true
+        timeframe: { type: string }
         performance:
           type: object
           properties:
