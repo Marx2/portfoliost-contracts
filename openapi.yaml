@@ -102,6 +102,14 @@ components:
       in: query
       schema: { type: string }
       description: Comma-separated benchmark symbols to overlay (e.g. SPY,QQQ)
+    benchmarkCalcType:
+      name: benchmarkCalcType
+      in: query
+      schema:
+        type: string
+        enum: [moneyWeighted, timeWeighted, simple]
+        default: timeWeighted
+      description: Return-type calculation used for benchmark series and the authoritative portfolio return line (default timeWeighted)
 
   schemas:
     # ─── Shared ────────────────────────────────────────────────
@@ -1115,6 +1123,8 @@ components:
                   properties:
                     date: { type: string }
                     value: { type: number }
+              returnPercent: { type: number }
+              volatility: { type: number }
         portfolioCurrency: { type: string }
         realizedGain: { type: number }
         monthlyReturns:
@@ -2716,6 +2726,7 @@ paths:
         - $ref: '#/components/parameters/timeframe'
         - $ref: '#/components/parameters/benchmark'
         - $ref: '#/components/parameters/benchmarks'
+        - $ref: '#/components/parameters/benchmarkCalcType'
       responses:
         '200':
           description: Analytics
