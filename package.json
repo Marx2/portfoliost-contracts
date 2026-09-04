@@ -1,6 +1,6 @@
 {
   "name": "@marx2/contracts",
-  "version": "1.6.7",
+  "version": "1.6.8",
   "type": "module",
   "description": "Portfoliost API contract — OpenAPI spec shared by frontend and backend",
   "main": "./openapi.yaml",
