@@ -1109,6 +1109,9 @@ components:
                 properties:
                   date: { type: string }
                   value: { type: number }
+                  cumulativeTwr: { type: number }
+                  cumulativeMwr: { type: number }
+                  cumulativeSimple: { type: number }
         benchmarks:
           type: array
           items:
