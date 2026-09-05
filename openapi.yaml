@@ -90,7 +90,7 @@ components:
       in: query
       schema:
         type: string
-        enum: [1D, 5D, 1M, 3M, 6M, YTD, 1Y, 2Y, 3Y, 5Y, ALL]
+        enum: [1D, 5D, 1W, 1M, 3M, 6M, YTD, 1Y, 2Y, 3Y, 5Y, ALL]
         default: 1Y
     benchmark:
       name: benchmark
