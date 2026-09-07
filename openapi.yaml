@@ -856,10 +856,25 @@ components:
         quarter: { type: integer, nullable: true }
         title: { type: string }
         time: { type: string, nullable: true }
-        participant: { type: array, items: { type: object } }
+        participant:
+          type: array
+          items: { $ref: '#/components/schemas/IRTranscriptParticipant' }
         audio: { type: string, nullable: true }
-        transcript: { type: array, items: { type: object } }
+        transcript:
+          type: array
+          items: { $ref: '#/components/schemas/IRTranscriptBlock' }
         body: { type: string, nullable: true }
+    IRTranscriptParticipant:
+      type: object
+      properties:
+        name: { type: string }
+    IRTranscriptBlock:
+      type: object
+      properties:
+        name: { type: string }
+        speech:
+          type: array
+          items: { type: string }
     ResearchCompare:
       type: object
       properties:
