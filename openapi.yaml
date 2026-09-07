@@ -845,6 +845,8 @@ components:
         quarter: { type: integer, nullable: true }
         symbol: { type: string }
         audioUrl: { type: string, nullable: true }
+        reportUrl: { type: string, nullable: true }
+        formType: { type: string, nullable: true }
     IRTranscript:
       type: object
       properties:
@@ -857,6 +859,7 @@ components:
         participant: { type: array, items: { type: object } }
         audio: { type: string, nullable: true }
         transcript: { type: array, items: { type: object } }
+        body: { type: string, nullable: true }
     ResearchCompare:
       type: object
       properties:
