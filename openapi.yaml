@@ -1790,6 +1790,15 @@ components:
               symbol:   { type: string }
               rowCount: { type: integer }
 
+    AdminPagination:
+      type: object
+      required: [total, page, per_page, total_pages]
+      properties:
+        total: { type: integer }
+        page: { type: integer }
+        per_page: { type: integer }
+        total_pages: { type: integer }
+
     AdminUser:
       type: object
       required: [id, groups, lastLogin, createdAt]
@@ -1821,14 +1830,28 @@ components:
         items:
           type: array
           items: { $ref: '#/components/schemas/AdminUser' }
-        pagination:
-          type: object
-          required: [total, page, per_page, total_pages]
-          properties:
-            total: { type: integer }
-            page: { type: integer }
-            per_page: { type: integer }
-            total_pages: { type: integer }
+        pagination: { $ref: '#/components/schemas/AdminPagination' }
+
+    AdminFxRate:
+      type: object
+      required: [date, baseCurrency, quoteCurrency, rate]
+      properties:
+        date:
+          type: string
+          format: date
+          description: ECB reference rate date (EUR-based)
+        baseCurrency: { type: string }
+        quoteCurrency: { type: string }
+        rate: { type: number }
+
+    AdminFxRatesResponse:
+      type: object
+      required: [items, pagination]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/AdminFxRate' }
+        pagination: { $ref: '#/components/schemas/AdminPagination' }
 
 paths:
   # ─── Auth (custom mock) ──────────────────────────────────────
@@ -3804,6 +3827,65 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/AdminUserListResponse' }
+        '401':
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '403':
+          description: Not a portfoliost_admin
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  /admin/currencies/rates:
+    get:
+      tags: [Admin]
+      summary: Page through EUR-based FX reference rates with filters
+      description: |
+        Admin-facing list of ECB reference rates (base is always EUR).
+        Sorting, filtering and pagination are all server-side.
+      operationId: listAdminFxRates
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: page
+          in: query
+          required: false
+          schema: { type: integer, default: 1 }
+        - name: per_page
+          in: query
+          required: false
+          schema: { type: integer, default: 50, maximum: 200 }
+        - name: sort_by
+          in: query
+          required: false
+          schema: { type: string, enum: [date, base_currency, quote_currency, rate], default: date }
+        - name: sort_dir
+          in: query
+          required: false
+          schema: { type: string, enum: [asc, desc], default: desc }
+        - name: base_currency
+          in: query
+          required: false
+          schema: { type: string, description: Exact base currency (EUR for all rows) }
+        - name: quote_currency
+          in: query
+          required: false
+          schema: { type: string, description: Exact quote currency filter }
+        - name: date_from
+          in: query
+          required: false
+          schema: { type: string, format: date, description: Inclusive lower bound }
+        - name: date_to
+          in: query
+          required: false
+          schema: { type: string, format: date, description: Inclusive upper bound }
+      responses:
+        '200':
+          description: Paginated FX rate list
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminFxRatesResponse' }
         '401':
           description: Missing or invalid token
           content:
