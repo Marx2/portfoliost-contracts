@@ -2735,6 +2735,10 @@ paths:
           in: query
           schema: { type: string }
           description: Comma-separated label ids; AND filter (entity must have all)
+        - name: instrumentSymbol
+          in: query
+          schema: { type: string }
+          description: Filter by instrument symbol (e.g. AAPL). Case-insensitive.
       responses:
         '200':
           description: Transactions
@@ -2938,6 +2942,10 @@ paths:
           in: query
           schema: { type: string }
           description: Comma-separated label ids; AND filter (entity must have all)
+        - name: instrumentSymbol
+          in: query
+          schema: { type: string }
+          description: Filter by instrument symbol (e.g. AAPL). Case-insensitive.
       responses:
         '200':
           description: Transactions
