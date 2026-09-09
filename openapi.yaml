@@ -578,6 +578,7 @@ components:
         name: { type: string }
         type: { type: string }
         exchange: { type: string }
+        countryCode: { type: string, nullable: true }
         source: { type: string }
     InstrumentSearchResponse:
       type: object
@@ -2738,7 +2739,10 @@ paths:
         - name: instrumentSymbol
           in: query
           schema: { type: string }
-          description: Filter by instrument symbol (e.g. AAPL). Case-insensitive.
+          description: >-
+            Filter by instrument symbol. Must be in canonical form: bare ticker
+            for US listings (AAPL, SAP), Yahoo venue suffix for others (SAP.DE,
+            SNT.WA). Case-insensitive exact match.
       responses:
         '200':
           description: Transactions
@@ -2945,7 +2949,10 @@ paths:
         - name: instrumentSymbol
           in: query
           schema: { type: string }
-          description: Filter by instrument symbol (e.g. AAPL). Case-insensitive.
+          description: >-
+            Filter by instrument symbol. Must be in canonical form: bare ticker
+            for US listings (AAPL, SAP), Yahoo venue suffix for others (SAP.DE,
+            SNT.WA). Case-insensitive exact match.
       responses:
         '200':
           description: Transactions
