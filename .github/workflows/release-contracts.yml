@@ -1,19 +1,20 @@
-name: Release CI
+name: Release @marx2/contracts
 
-# On every push to main:
-#   1. Read latest git tag (source of truth) → bump patch → new version
-#   2. Write new version into package.json (package.json always mirrors the tag)
-#   3. Build TS helpers, commit version bump + dist, push tag
-#   4. Create GitHub Release
-#   5. Publish to GitHub Packages (@marx2/contracts)
+# On every push to main that touches contracts/**:
+#   1. Bump patch from latest v* git tag
+#   2. Build TS helpers, commit version bump, push tag
+#   3. Create GitHub Release
+#   4. Publish to GitHub Packages (@marx2/contracts)
 #
-# On pull requests: validate only (no publish, no tag).
+# On pull requests touching contracts/**: validate only.
 
 on:
   push:
     branches: [ "main" ]
+    paths: [ "contracts/**" ]
   pull_request:
     branches: [ "main" ]
+    paths: [ "contracts/**" ]
 
 jobs:
 
@@ -28,7 +29,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          fetch-depth: 0          # full history needed to read tags
+          fetch-depth: 0
 
       - uses: actions/setup-node@v6
         with:
@@ -39,7 +40,6 @@ jobs:
       - name: Bump patch from latest git tag
         id: bump
         run: |
-          # Latest semver tag is the source of truth; package.json is derived from it.
           LATEST=$(git tag --list 'v*' --sort=-version:refname | head -n1)
           if [ -z "$LATEST" ]; then
             NEXT="1.0.0"
@@ -52,23 +52,19 @@ jobs:
           echo "Bumped ${LATEST:-none} → v${NEXT}"
 
       - name: Write version into package.json
-        run: |
-          # --no-git-tag-version: we handle the commit + tag ourselves below
-          npm version "${{ steps.bump.outputs.plain }}" --no-git-tag-version
+        working-directory: contracts
+        run: npm version "${{ steps.bump.outputs.plain }}" --no-git-tag-version
 
       - name: Install and build TS helpers
+        working-directory: contracts
         run: npm install --no-audit --no-fund && npm run build
 
       - name: Commit version bump and push tag
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          # Only commit package.json and package-lock.json — dist/ is gitignored
-          # intentionally (consumers install via registry, not from git tree).
-          # npm publish uses the built dist/ from the working tree via "files" in
-          # package.json regardless of whether it is tracked by git.
-          git add package.json package-lock.json
-          git commit -m "chore(release): ${{ steps.bump.outputs.version }}"
+          git add contracts/package.json contracts/package-lock.json
+          git commit -m "chore(release-contracts): ${{ steps.bump.outputs.version }}"
           git tag "${{ steps.bump.outputs.version }}"
           git push origin main --follow-tags
 
@@ -82,6 +78,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Publish to GitHub Packages
+        working-directory: contracts
         run: npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -92,15 +89,13 @@ jobs:
       - uses: actions/checkout@v6
 
       - name: Validate OpenAPI spec parses
-        run: |
-          python3 -c "import yaml; yaml.safe_load(open('openapi.yaml')); print('openapi.yaml parses OK')"
+        working-directory: contracts
+        run: python3 -c "import yaml; yaml.safe_load(open('openapi.yaml')); print('openapi.yaml parses OK')"
 
       - uses: actions/setup-node@v6
         with:
           node-version: 22
 
       - name: Install, test and build TS helpers
-        run: |
-          npm install --no-audit --no-fund
-          npm test
-          npm run build
+        working-directory: contracts
+        run: npm install --no-audit --no-fund && npm test && npm run build

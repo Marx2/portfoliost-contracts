@@ -1,0 +1,97 @@
+name: Release @marx2/otel
+
+# On every push to main that touches otel/**:
+#   1. Bump patch from latest otel-v* git tag
+#   2. Build TS helpers, commit version bump, push tag
+#   3. Create GitHub Release
+#   4. Publish to GitHub Packages (@marx2/otel)
+#
+# On pull requests touching otel/**: validate only.
+
+on:
+  push:
+    branches: [ "main" ]
+    paths: [ "otel/**" ]
+  pull_request:
+    branches: [ "main" ]
+    paths: [ "otel/**" ]
+
+jobs:
+
+  release:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+    outputs:
+      version: ${{ steps.bump.outputs.version }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          registry-url: https://npm.pkg.github.com
+          scope: "@marx2"
+
+      - name: Bump patch from latest otel-v* tag
+        id: bump
+        run: |
+          LATEST=$(git tag --list 'otel-v*' --sort=-version:refname | head -n1)
+          if [ -z "$LATEST" ]; then
+            NEXT="1.0.0"
+          else
+            IFS='.' read -r MAJOR MINOR PATCH <<< "${LATEST#otel-v}"
+            NEXT="${MAJOR}.${MINOR}.$((PATCH + 1))"
+          fi
+          echo "version=otel-v${NEXT}" >> "$GITHUB_OUTPUT"
+          echo "plain=${NEXT}"         >> "$GITHUB_OUTPUT"
+          echo "Bumped ${LATEST:-none} → otel-v${NEXT}"
+
+      - name: Write version into package.json
+        working-directory: otel
+        run: npm version "${{ steps.bump.outputs.plain }}" --no-git-tag-version
+
+      - name: Install and build TS helpers
+        working-directory: otel
+        run: npm install --no-audit --no-fund && npm run build
+
+      - name: Commit version bump and push tag
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add otel/package.json otel/package-lock.json
+          git commit -m "chore(release-otel): ${{ steps.bump.outputs.version }}"
+          git tag "${{ steps.bump.outputs.version }}"
+          git push origin main --follow-tags
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ steps.bump.outputs.version }}
+          name: Release ${{ steps.bump.outputs.version }}
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish to GitHub Packages
+        working-directory: otel
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+
+      - name: Install, lint and build TS helpers
+        working-directory: otel
+        run: npm install --no-audit --no-fund && npm run lint && npm run build

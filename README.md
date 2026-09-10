@@ -1,32 +1,33 @@
-# @marx2/contracts
+# portfoliost-contracts
 
-Portfoliost API contract — OpenAPI 3.0.3 spec shared by frontend and backend.
+Monorepo containing two independently-published `@marx2` packages:
 
-## Usage
+| Package | Description | Workflow |
+|---------|-------------|----------|
+| `contracts/` | `@marx2/contracts` — OpenAPI spec, FX helpers, currencies | `release-contracts.yml` |
+| `otel/` | `@marx2/otel` — shared OpenTelemetry bootstrap helpers for Hono services | `release-otel.yml` |
+
+Each subfolder has its own `package.json`, `tsconfig.json`, semver version, and CI workflow.
+
+## Development
 
 ```bash
-npm install @marx2/contracts
-```
+# contracts
+cd contracts && npm install && npm run build && npm test
 
-The package exports `openapi.yaml` as the single source of truth for API types.
-
-### Frontend (openapi-typescript)
-
-```bash
-npx openapi-typescript node_modules/@marx2/contracts/openapi.yaml -o generated/api-types.d.ts
-```
-
-### Backend (hono-zod-openapi)
-
-```ts
-import spec from "@marx2/contracts/openapi.yaml" with { type: "yaml" }
+# otel
+cd otel && npm install && npm run build
 ```
 
 ## Publishing
 
-Push to `main` → GitHub Actions publishes to GitHub Packages automatically.
+Push to `main` — CI auto-bumps the patch version, commits, tags, and publishes to GitHub Packages.
+
+- `contracts/**` changes → `@marx2/contracts` (tagged `v*`)
+- `otel/**` changes → `@marx2/otel` (tagged `otel-v*`)
 
 ## Structure
 
-- `openapi.yaml` — source-of-truth spec
+- `.npmrc` — shared GitHub Packages registry config (both packages use `@marx2` scope)
+- `.gitignore` — shared ignore rules
 - `stoxly-reference/` — original Stoxly API spec (reference only)
