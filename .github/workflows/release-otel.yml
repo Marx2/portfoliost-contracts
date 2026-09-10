@@ -53,7 +53,7 @@ jobs:
 
       - name: Write version into package.json
         working-directory: otel
-        run: npm version "${{ steps.bump.outputs.plain }}" --no-git-tag-version
+        run: node -e "const fs=require('fs');const p=JSON.parse(fs.readFileSync('package.json','utf8'));p.version='${{ steps.bump.outputs.plain }}';fs.writeFileSync('package.json',JSON.stringify(p,null,2)+'\n')"
 
       - name: Install and build TS helpers
         working-directory: otel
