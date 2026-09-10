@@ -34,68 +34,43 @@ export interface CreateSdkOpts {
  * Traces default to NoopSpanExporter — wire Tempo exporter in D57.
  */
 export function createSdk(opts: CreateSdkOpts): NodeSDK {
-  const { NoopSpanExporter } = require("@opentelemetry/sdk-trace-base")
-  return new NodeSDK({
+  const sdkOpts: ConstructorParameters<typeof NodeSDK>[0] = {
     resource: createResource(opts.serviceName),
     metricReader: opts.metricReader,
     instrumentations: opts.instrumentations ?? [],
-    traceExporter: opts.traceExporter ?? new NoopSpanExporter(),
-  })
+  }
+  if (opts.traceExporter) {
+    sdkOpts.traceExporter = opts.traceExporter
+  }
+  return new NodeSDK(sdkOpts)
 }
 
 /**
  * Returns a Hono-compatible route handler that serves Prometheus text format.
+ * Uses PrometheusExporter.getMetricsRequestHandler() — the public API.
  * Mount as `app.get('/metrics', metricsRouteHandler)`.
  */
 export function buildMetricsRoute(exporter: PrometheusExporter) {
-  return async (c: Context) => {
-    const text = await serializePrometheus(exporter)
-    return c.body(text, 200, {
-      "Content-Type": "text/plain; version=0.0.4; charset=utf-8",
-    })
-  }
-}
-
-/**
- * Collect metrics from the exporter's reader and serialize to Prometheus text.
- */
-async function serializePrometheus(exporter: PrometheusExporter): Promise<string> {
-  const reader = (exporter as any)._reader as
-    | { collect(): Promise<{ resourceMetrics: any[] }> }
-    | undefined
-  if (!reader) return "# metrics reader not ready\n"
-
-  const serializer = (exporter as any)._serializer as
-    | { serialize(resourceMetrics: any): string }
-    | undefined
-
-  const result = await reader.collect()
-  const resourceMetrics = result?.resourceMetrics ?? []
-
-  if (serializer && resourceMetrics.length > 0) {
-    return serializer.serialize(resourceMetrics)
-  }
-
-  return fallbackSerialize(resourceMetrics)
-}
-
-function fallbackSerialize(resourceMetrics: any[]): string {
-  const lines: string[] = []
-  for (const rm of resourceMetrics) {
-    for (const sm of rm.scopeMetrics ?? []) {
-      for (const metric of sm.metrics ?? []) {
-        const name = metric.descriptor?.name ?? metric.name ?? "unknown"
-        for (const dp of metric.dataPoints ?? []) {
-          const attrs = dp.attributes ?? dp.attributeMap ?? {}
-          const labels = Object.entries(attrs)
-            .map(([k, v]) => `${k}="${String(v)}"`)
-            .join(",")
-          const labelStr = labels ? `{${labels}}` : ""
-          const val = dp.value ?? dp.sum ?? dp.lastValue ?? 0
-          lines.push(`${name}${labelStr} ${val}`)
-        }
+  const handler = exporter.getMetricsRequestHandler.bind(exporter)
+  return (c: Context) =>
+    new Promise<Response>((resolve, reject) => {
+      const mockReq = { method: "GET", url: "/metrics", headers: {} } as any
+      const mockRes = {
+        statusCode: 200,
+        setHeader(_k: string, _v: string) {},
+        end(body: string | Buffer) {
+          const text = Buffer.isBuffer(body) ? body.toString() : (body ?? "")
+          resolve(
+            c.body(text, 200, {
+              "Content-Type": "text/plain; version=0.0.4; charset=utf-8",
+            }),
+          )
+        },
       }
-    }
-  }
-  return lines.length > 0 ? lines.join("\n") + "\n" : "# no metrics\n"
+      try {
+        handler(mockReq, mockRes as any)
+      } catch (err) {
+        reject(err)
+      }
+    })
 }
