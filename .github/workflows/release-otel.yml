@@ -42,7 +42,10 @@ jobs:
         run: |
           LATEST=$(git tag --list 'otel-v*' --sort=-version:refname | head -n1)
           if [ -z "$LATEST" ]; then
-            NEXT="1.0.0"
+            # No prior tag — bump patch from the current package.json version
+            CURRENT=$(node -p "require('./otel/package.json').version")
+            IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT"
+            NEXT="${MAJOR}.${MINOR}.$((PATCH + 1))"
           else
             IFS='.' read -r MAJOR MINOR PATCH <<< "${LATEST#otel-v}"
             NEXT="${MAJOR}.${MINOR}.$((PATCH + 1))"
