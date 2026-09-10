@@ -1,3 +1,4 @@
+// @marx2/otel — shared OpenTelemetry bootstrap helpers for pfire Hono services (D56)
 import type { Resource } from "@opentelemetry/resources"
 import { resourceFromAttributes, defaultResource } from "@opentelemetry/resources"
 import { NodeSDK } from "@opentelemetry/sdk-node"
