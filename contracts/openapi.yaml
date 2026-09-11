@@ -1854,6 +1854,81 @@ components:
           items: { $ref: '#/components/schemas/AdminFxRate' }
         pagination: { $ref: '#/components/schemas/AdminPagination' }
 
+    # ── Admin: Topology (D55 — system topology / data flow tab) ────────────
+    TopologyStatusResponse:
+      type: object
+      required: [services, fetchedAt]
+      properties:
+        services:
+          type: array
+          items: { $ref: '#/components/schemas/TopologyServiceStatus' }
+        fetchedAt:
+          type: string
+          format: date-time
+          description: ISO-8601 timestamp of the status fetch
+    TopologyServiceStatus:
+      type: object
+      required: [name, reachable, impl]
+      properties:
+        name:
+          type: string
+          description: Deployment name (matches the topology graph node id)
+        reachable:
+          type: boolean
+          description: Whether /__meta responded within 3 s
+        impl:
+          type: string
+          enum: [real, mock, unknown, job]
+        version:
+          type: string
+        replicas:
+          type: object
+          nullable: true
+          required: [desired, ready]
+          properties:
+            desired: { type: integer }
+            ready: { type: integer }
+        restarts:
+          type: integer
+          nullable: true
+    TopologyTrafficResponse:
+      type: object
+      required: [services, cachestProviders, fetchedAt]
+      properties:
+        services:
+          type: array
+          items: { $ref: '#/components/schemas/TopologyServiceTraffic' }
+        cachestProviders:
+          type: array
+          items:
+            type: object
+            required: [provider, p99LatencyMs]
+            properties:
+              provider:
+                type: string
+                description: cachest outbound server_address label, e.g. openst or alphavantage.co
+              p99LatencyMs: { type: number }
+        fetchedAt:
+          type: string
+          format: date-time
+          description: ISO-8601 timestamp of the traffic fetch
+    TopologyServiceTraffic:
+      type: object
+      required: [name, requestsPerMin, errorRate, p99LatencyMs, source]
+      properties:
+        name:
+          type: string
+          description: Service name (matches the topology graph node id)
+        requestsPerMin: { type: number }
+        errorRate:
+          type: number
+          description: Fraction of requests returning 4xx/5xx (0–1)
+        p99LatencyMs: { type: number }
+        source:
+          type: string
+          enum: [otel, ingress, none]
+          description: Metric source used (otel when D56 metrics present, ingress fallback, none when Prometheus unavailable)
+
 paths:
   # ─── Auth (custom mock) ──────────────────────────────────────
   /auth/login:
