@@ -1,6 +1,6 @@
 {
   "name": "@marx2/otel",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "type": "module",
   "description": "Shared OpenTelemetry bootstrap helpers for Hono services",
   "exports": {

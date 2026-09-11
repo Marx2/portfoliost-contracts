@@ -3,10 +3,29 @@ import type { Resource } from "@opentelemetry/resources"
 import { resourceFromAttributes, defaultResource } from "@opentelemetry/resources"
 import { NodeSDK } from "@opentelemetry/sdk-node"
 import type { SpanExporter } from "@opentelemetry/sdk-trace-base"
-import type { MetricReader } from "@opentelemetry/sdk-metrics"
+import type { MetricReader, ViewOptions } from "@opentelemetry/sdk-metrics"
 import type { Instrumentation } from "@opentelemetry/instrumentation"
 import type { PrometheusExporter } from "@opentelemetry/exporter-prometheus"
 import type { Context } from "hono"
+
+/**
+ * Views that rename the OTel http duration histograms so the JS Prometheus exporter
+ * produces `http_*_request_duration_seconds_*` — matching the Python exporter's convention.
+ *
+ * The JS exporter (≥0.200) emits the bare sanitised name without appending the unit
+ * (it uses a `# UNIT` metadata line instead).  Renaming the instrument to include
+ * `.seconds` makes the sanitised Prometheus name consistent with Python's output.
+ */
+const HTTP_DURATION_VIEWS: ViewOptions[] = [
+  {
+    name: "http.server.request.duration.seconds",
+    instrumentName: "http.server.request.duration",
+  },
+  {
+    name: "http.client.request.duration.seconds",
+    instrumentName: "http.client.request.duration",
+  },
+]
 
 /**
  * Build an OTel Resource with standard pfire service attributes.
@@ -39,6 +58,7 @@ export function createSdk(opts: CreateSdkOpts): NodeSDK {
     resource: createResource(opts.serviceName),
     metricReader: opts.metricReader,
     instrumentations: opts.instrumentations ?? [],
+    views: HTTP_DURATION_VIEWS,
   }
   if (opts.traceExporter) {
     sdkOpts.traceExporter = opts.traceExporter
