@@ -1768,6 +1768,13 @@ components:
             taxes: { type: number, nullable: true }
             realizedGainLoss: { type: number, nullable: true }
             executedAt: { type: string, format: date-time, nullable: true }
+            direction:
+              type: string
+              enum: [LONG, SHORT]
+              nullable: true
+              description: SHORT marks a short-option open (position-creating, regardless of type)
+            optionType: { type: string, enum: [CALL, PUT], nullable: true }
+            contractSize: { type: number, nullable: true }
     ImportTransactionsResponse:
       type: object
       required: [inserted, skipped, errors]
