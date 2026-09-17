@@ -28,6 +28,8 @@ tags:
   - name: Misc
   - name: Admin
     description: Admin panel APIs (requires portfoliost_admin group)
+  - name: Internal
+    description: Cluster-internal endpoints (no auth — never exposed through the gateway)
 
 components:
   securitySchemes:
@@ -1384,6 +1386,22 @@ components:
             convertedRealizedGainLoss: { type: number, nullable: true }
             sector: { type: string }
             country: { type: string }
+            externalSource:
+              type: string
+              nullable: true
+              description: Import provenance tag; NULL for manually-created rows
+            externalId:
+              type: string
+              nullable: true
+              description: Importer-supplied dedup key; unique per externalSource
+            originalQuantity:
+              type: number
+              nullable: true
+              description: Pre-split/pre-restatement quantity; frozen at creation
+            originalPrice:
+              type: number
+              nullable: true
+              description: Pre-split/pre-restatement price; frozen at creation
             labels:
               type: array
               items: { $ref: '#/components/schemas/Label' }
@@ -1567,6 +1585,14 @@ components:
             new_balance: { type: number, nullable: true }
             remaining_balance: { type: number, nullable: true }
             walletName: { type: string, nullable: true }
+            externalSource:
+              type: string
+              nullable: true
+              description: Import provenance tag; NULL for manually-created rows
+            externalId:
+              type: string
+              nullable: true
+              description: Importer-supplied dedup key; unique per externalSource
             labels:
               type: array
               items: { $ref: '#/components/schemas/Label' }
@@ -1609,6 +1635,202 @@ components:
             page: { type: integer }
             limit: { type: integer }
             totalPages: { type: integer }
+
+    # ─── Import API (wallets-import-api §23) ─────────────────
+    ImportWalletBootstrapRequest:
+      type: object
+      required: [externalSource, wallets]
+      properties:
+        externalSource:
+          type: string
+          description: Source tag; created wallets get external_source = this value
+        wallets:
+          type: array
+          items:
+            type: object
+            required: [name, currency]
+            properties:
+              name: { type: string }
+              currency: { type: string }
+              baseCurrency: { type: string }
+    ImportWalletBootstrapResponse:
+      type: object
+      properties:
+        wallets:
+          type: array
+          items:
+            type: object
+            required: [id, name, currency, created]
+            properties:
+              id: { type: string, format: uuid }
+              name: { type: string }
+              currency: { type: string }
+              baseCurrency: { type: string }
+              created:
+                type: boolean
+                description: true = just inserted (external_source tagged); false = already existed (not re-tagged)
+    ImportPortfolioBootstrapRequest:
+      type: object
+      required: [externalSource, name, currency]
+      properties:
+        externalSource: { type: string }
+        name: { type: string }
+        currency: { type: string }
+        baseCurrency: { type: string }
+    ImportPortfolioBootstrapResponse:
+      type: object
+      required: [id, name, currency, created]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        currency: { type: string }
+        baseCurrency: { type: string }
+        created:
+          type: boolean
+          description: true = just inserted (external_source tagged); false = already existed (not re-tagged)
+    ImportTransactionsRequest:
+      type: object
+      required: [source, transactions]
+      properties:
+        source:
+          type: object
+          required: [externalSource, spreadsheetId, sheet]
+          properties:
+            externalSource: { type: string }
+            spreadsheetId: { type: string }
+            sheet: { type: string }
+        transactions:
+          type: array
+          maxItems: 500
+          description: Idempotent; re-submitting the same externalId array is a no-op
+          items: { $ref: '#/components/schemas/ImportTransaction' }
+    ImportTransaction:
+      type: object
+      required: [externalId, walletName, executedAt, walletTx]
+      properties:
+        externalId:
+          type: string
+          description: Stable dedup key derived by the importer (e.g. SHA256 of source row fields)
+        walletName:
+          type: string
+          description: Must exist for this user; use wallets/bootstrap to create missing ones
+        executedAt: { type: string, format: date-time }
+        walletTx: { $ref: '#/components/schemas/ImportWalletTx' }
+        portfolioTx:
+          $ref: '#/components/schemas/ImportPortfolioTx'
+          description: Omit for pure-cash events (DEPOSIT/WITHDRAWAL)
+    ImportWalletTx:
+      allOf:
+        - $ref: '#/components/schemas/FeeFxFields'
+        - type: object
+          required: [type, amount, currency]
+          properties:
+            type:
+              type: string
+              enum: [DEPOSIT, WITHDRAWAL, TRANSFER, INVEST, SELL, DIVIDEND, FEE, INTEREST, ADJUSTMENT]
+            amount:
+              type: number
+              description: Signed; negative = cash out. ADJUSTMENT allows 0 (split markers)
+            currency: { type: string }
+            description: { type: string, nullable: true }
+            transactionDate: { type: string, format: date, nullable: true }
+            status: { type: string }
+            paymentMethod: { type: string, nullable: true }
+            fees: { type: number, nullable: true }
+            feesType: { type: string, enum: [fixed, pct], nullable: true }
+            taxes: { type: number, nullable: true }
+            reference: { type: string, nullable: true }
+            portfolioId: { type: string, format: uuid, nullable: true }
+    ImportPortfolioTx:
+      allOf:
+        - $ref: '#/components/schemas/FeeFxFields'
+        - type: object
+          required: [portfolioId, type, instrumentSymbol, quantity, price, currency]
+          properties:
+            portfolioId: { type: string, format: uuid }
+            type: { type: string, enum: [BUY, SELL, DIVIDEND] }
+            instrumentSymbol: { type: string }
+            instrumentName: { type: string, nullable: true }
+            assetType: { type: string, default: STOCK }
+            quantity: { type: number, description: Post-restatement quantity used in calculations }
+            price: { type: number, description: Post-restatement unit price used in calculations }
+            originalQuantity:
+              type: number
+              nullable: true
+              description: Pre-restatement quantity; frozen at creation
+            originalPrice:
+              type: number
+              nullable: true
+              description: Pre-restatement unit price; frozen at creation
+            currency: { type: string }
+            fees: { type: number, nullable: true }
+            feesType: { type: string, enum: [fixed, pct], nullable: true }
+            taxes: { type: number, nullable: true }
+            realizedGainLoss: { type: number, nullable: true }
+            executedAt: { type: string, format: date-time, nullable: true }
+    ImportTransactionsResponse:
+      type: object
+      required: [inserted, skipped, errors]
+      properties:
+        inserted: { type: integer }
+        skipped: { type: integer }
+        errors:
+          type: array
+          description: Row-level failures; the rest of the batch still succeeds
+          items:
+            type: object
+            required: [externalId, error]
+            properties:
+              externalId: { type: string }
+              error: { type: string }
+              message: { type: string }
+        syncRun: { $ref: '#/components/schemas/SyncRun' }
+    SyncRun:
+      type: object
+      required: [id, externalSource, spreadsheetId, sheet, status, insertedWtx, insertedPtx, skipped]
+      properties:
+        id: { type: integer }
+        externalSource: { type: string }
+        spreadsheetId: { type: string }
+        sheet: { type: string }
+        lastRow: { type: integer, nullable: true }
+        status: { type: string, enum: [pending, running, done, failed] }
+        startedAt: { type: string, format: date-time, nullable: true }
+        completedAt: { type: string, format: date-time, nullable: true }
+        error: { type: string, nullable: true }
+        insertedWtx: { type: integer }
+        insertedPtx: { type: integer }
+        skipped: { type: integer }
+    SyncRunsResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/SyncRun' }
+        total: { type: integer }
+    SourceWipeResponse:
+      type: object
+      properties:
+        deleted:
+          type: object
+          properties:
+            walletTransactions: { type: integer }
+            portfolios: { type: integer }
+            wallets: { type: integer }
+            syncRuns: { type: integer }
+    ApplySplitRequest:
+      type: object
+      required: [symbol, factor, effectiveDate]
+      properties:
+        symbol: { type: string }
+        factor: { type: number }
+        effectiveDate: { type: string, format: date }
+    ApplySplitResponse:
+      type: object
+      required: [updatedTransactions, affectedPortfolios]
+      properties:
+        updatedTransactions: { type: integer }
+        affectedPortfolios: { type: integer }
 
     # ─── Watchlists ────────────────────────────────────────────
     Watchlist:
@@ -3520,6 +3742,165 @@ paths:
       responses:
         '204':
           description: Deleted
+  # ─── Import API (wallets-import-api §23) ────────────────────
+  /import/wallets/bootstrap:
+    post:
+      tags: [Wallets]
+      summary: Idempotently ensure wallets exist, tagged with external_source
+      operationId: importWalletBootstrap
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ImportWalletBootstrapRequest' }
+      responses:
+        '200':
+          description: Wallets ensured
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ImportWalletBootstrapResponse' }
+        '401':
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '422':
+          description: Malformed payload
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+  /import/portfolios/bootstrap:
+    post:
+      tags: [Wallets]
+      summary: Idempotently ensure a portfolio exists, tagged with external_source
+      operationId: importPortfolioBootstrap
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ImportPortfolioBootstrapRequest' }
+      responses:
+        '200':
+          description: Portfolio ensured
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ImportPortfolioBootstrapResponse' }
+        '401':
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '422':
+          description: Malformed payload
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+  /import/transactions:
+    post:
+      tags: [Wallets]
+      summary: Submit an idempotent batch of max 500 imported transaction events
+      operationId: importTransactions
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ImportTransactionsRequest' }
+      responses:
+        '200':
+          description: Batch processed; row-level failures collected in errors[]
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ImportTransactionsResponse' }
+        '401':
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '422':
+          description: Malformed payload — entire batch rejected
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+  /import/sync-runs:
+    get:
+      tags: [Wallets]
+      summary: List import runs for the authenticated user
+      operationId: listSyncRuns
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: externalSource
+          in: query
+          required: false
+          description: Filter runs by source
+          schema: { type: string }
+        - name: limit
+          in: query
+          required: false
+          schema: { type: integer, default: 20 }
+        - name: offset
+          in: query
+          required: false
+          schema: { type: integer, default: 0 }
+      responses:
+        '200':
+          description: Sync runs
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SyncRunsResponse' }
+        '401':
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+  /import/sync-runs/{id}:
+    delete:
+      tags: [Wallets]
+      summary: Delete a sync run record (does not delete imported transactions)
+      operationId: deleteSyncRun
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '204':
+          description: Deleted
+        '401':
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '404':
+          description: Run not owned by the caller or missing
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+  /import/source/{externalSource}:
+    delete:
+      tags: [Wallets]
+      summary: Wipe all data tagged with this source for the authenticated user
+      operationId: wipeImportSource
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: externalSource
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Wiped
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SourceWipeResponse' }
+        '401':
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
   /watchlists:
     get:
       tags: [Watchlists]
@@ -3983,6 +4364,32 @@ paths:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
         '403':
           description: Not a portfoliost_admin
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+  # ─── Internal (cluster-internal, no gateway exposure) ───────
+  /internal/apply-split:
+    post:
+      tags: [Internal]
+      summary: Retroactively adjust portfolio transactions for a stock split
+      operationId: applySplit
+      description: >-
+        No auth — reachable only inside the cluster. Recomputes quantity/price
+        for all transactions of a symbol before the effective date from the
+        frozen original_quantity/original_price; idempotent.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ApplySplitRequest' }
+      responses:
+        '200':
+          description: Adjusted
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApplySplitResponse' }
+        '500':
+          description: Internal error
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
