@@ -1825,6 +1825,12 @@ components:
             portfolios: { type: integer }
             wallets: { type: integer }
             syncRuns: { type: integer }
+            positions: { type: integer }
+            portfolioTransactions: { type: integer }
+            valueSnapshots: { type: integer }
+            shares: { type: integer }
+            portfolioBackfillMetadata: { type: integer }
+            nulledWalletRefs: { type: integer }
     ApplySplitRequest:
       type: object
       required: [symbol, factor, effectiveDate]
