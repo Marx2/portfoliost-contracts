@@ -1111,6 +1111,14 @@ components:
           type: array
           items: { type: string, format: uuid }
 
+    BackfillRecomputeResponse:
+      type: object
+      required: [backfillStatus]
+      properties:
+        backfillStatus:
+          type: string
+          enum: [pending, complete, failed]
+
     PortfolioAnalytics:
       type: object
       properties:
@@ -3155,6 +3163,25 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/PortfolioAnalytics' }
+  /portfolios/{id}/recompute:
+    parameters:
+      - $ref: '#/components/parameters/portfolioId'
+    post:
+      tags: [Portfolios]
+      summary: Force-rebuild portfolio history (delete + rebuild value snapshots)
+      operationId: portfolioRecompute
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Recompute enqueued
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BackfillRecomputeResponse' }
+        '404':
+          description: Portfolio not owned by the caller or missing
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
   /portfolios/{id}/positions:
     parameters:
       - $ref: '#/components/parameters/portfolioId'
