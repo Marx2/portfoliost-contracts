@@ -411,6 +411,13 @@ components:
           items: { type: object, additionalProperties: true }
 
     # ─── Instruments ───────────────────────────────────────────
+    # D82 — instrument asset class. STOCK/ETF/BOND/CRYPTO pre-existed (as
+    # free-form strings); FUND and CORP_BOND are added for TFI funds and Catalyst
+    # corporate bonds (D80/D81). Consumers may still treat the field as a string.
+    InstrumentType:
+      type: string
+      enum: [STOCK, ETF, BOND, CRYPTO, FUND, CORP_BOND]
+
     InstrumentDetail:
       type: object
       properties:
@@ -418,7 +425,7 @@ components:
         symbol: { type: string }
         name: { type: string }
         exchange: { type: string }
-        type: { type: string }
+        type: { $ref: '#/components/schemas/InstrumentType' }
         currency: { type: string }
     InstrumentProfile:
       type: object
@@ -578,7 +585,7 @@ components:
       properties:
         symbol: { type: string }
         name: { type: string }
-        type: { type: string }
+        type: { $ref: '#/components/schemas/InstrumentType' }
         exchange: { type: string }
         countryCode: { type: string, nullable: true }
         source: { type: string }
