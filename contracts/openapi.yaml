@@ -1760,6 +1760,16 @@ components:
             instrumentSymbol: { type: string }
             instrumentName: { type: string, nullable: true }
             assetType: { type: string, default: STOCK }
+            sector: { type: string, nullable: true }
+            industry: { type: string, nullable: true }
+            country:
+              type: string
+              nullable: true
+              description: ISO-2 country code (e.g. PL) sourced from the import catalog
+            countryCode:
+              type: string
+              nullable: true
+              description: Legacy 2/3-letter country code when it differs from the ISO-2 country
             quantity: { type: number, description: Post-restatement quantity used in calculations }
             price: { type: number, description: Post-restatement unit price used in calculations }
             originalQuantity:
