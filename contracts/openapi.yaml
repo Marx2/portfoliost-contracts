@@ -832,12 +832,14 @@ components:
         currency: { type: string }
     PriceBarSeries:
       type: object
-      required: [symbol, timeframe, stale, dates, closes]
+      required: [symbol, timeframe, stale, currency, dates, closes]
       properties:
         symbol: { type: string }
         timeframe: { type: string }
         stale: { type: boolean }
-        currency: { type: string, nullable: true }
+        currency:
+          type: string
+          description: ISO-4217 currency of the closes (resolved from the profile/ticker reference; "USD" when unknown)
         dates:
           type: array
           items: { type: string, format: date }
