@@ -3017,6 +3017,14 @@ paths:
       summary: Merged (all-portfolios) data
       operationId: getMergedPortfolios
       security: [{ bearerAuth: [] }]
+      parameters:
+        - name: timeframe
+          in: query
+          schema:
+            type: string
+            enum: [1W, 1M, 3M, 6M, 1Y, 2Y, ALL]
+            default: ALL
+          description: Performance timeframe for the merged series (defaults to all available history)
       responses:
         '200':
           description: Merged data
