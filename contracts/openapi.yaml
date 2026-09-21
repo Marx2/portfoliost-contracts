@@ -414,6 +414,18 @@ components:
     # D82 — instrument asset class. STOCK/ETF/BOND/CRYPTO pre-existed (as
     # free-form strings); FUND and CORP_BOND are added for TFI funds and Catalyst
     # corporate bonds (D80/D81). Consumers may still treat the field as a string.
+    CurrencySource:
+      type: string
+      enum: [provider, estimated, unknown]
+      description: |
+        How the instrument `currency` was determined (plan §47):
+        - `provider` — the upstream provider declared the currency (e.g. the
+          biznesradar `priceCurrency` meta tag);
+        - `estimated` — no provider declaration; resolved locally from the
+          symbol (e.g. `.TFI`/`.FIZ` → PLN) or the exchange;
+        - `unknown` — nothing is known; `currency` is null and must never be
+          silently defaulted to a code.
+
     InstrumentType:
       type: string
       enum: [STOCK, ETF, BOND, CRYPTO, FUND, CORP_BOND]
@@ -427,6 +439,7 @@ components:
         exchange: { type: string }
         type: { $ref: '#/components/schemas/InstrumentType' }
         currency: { type: string, nullable: true, description: "ISO-4217; null when the provider does not declare one (45.2 — never guessed)" }
+        currencySource: { $ref: '#/components/schemas/CurrencySource', description: "How currency was determined (provider/estimated/unknown, plan §47.3)" }
     InstrumentProfile:
       type: object
       properties:
@@ -439,6 +452,7 @@ components:
         exchange: { type: string }
         finnhubIndustry: { type: string, nullable: true }
         ipo: { type: string, nullable: true }
+        currencySource: { $ref: '#/components/schemas/CurrencySource', description: "How currency was determined (provider/estimated/unknown, plan §47.3)" }
         logo: { type: string, nullable: true }
         marketCapitalization: { type: number, nullable: true }
         marketCapCurrency: { type: string, nullable: true }
@@ -561,6 +575,7 @@ components:
         bidSize: { type: integer }
         askSize: { type: integer }
         currency: { type: string, nullable: true, description: "ISO-4217; null when the provider does not declare one (45.2 — never guessed)" }
+        currencySource: { $ref: '#/components/schemas/CurrencySource', description: "How currency was determined (provider/estimated/unknown, plan §47.3)" }
         regularMarketPrice: { type: number }
         extendedHoursChange: { type: number }
         extendedHoursChangePercent: { type: number }
@@ -579,7 +594,8 @@ components:
         volumes: { type: array, items: { type: number } }
         timestamps: { type: array, items: { type: integer } }
         status: { type: string }
-        currency: { type: string }
+        currency: { type: string, nullable: true, description: "ISO-4217; null when the provider does not declare one (45.2 — never guessed). PriceHistory.currency was previously non-null; plan §47 makes it nullable to match Quote/Profile" }
+        currencySource: { $ref: '#/components/schemas/CurrencySource', description: "How currency was determined (provider/estimated/unknown, plan §47.3)" }
     SearchResult:
       type: object
       properties:
