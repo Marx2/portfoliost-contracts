@@ -988,6 +988,7 @@ components:
         strategy: { type: string }
         type: { type: string }
         currency: { type: string }
+        baseCurrency: { type: string }
         walletId: { type: string, format: uuid }
         totalInvested: { type: number }
         currentValue: { type: number }
