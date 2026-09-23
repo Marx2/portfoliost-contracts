@@ -1399,6 +1399,12 @@ components:
             affectedSymbolCount: { type: integer }
             issues: { type: array, items: { type: object } }
     Transaction:
+      description: >-
+        A portfolio transaction row. For `type: DIVIDEND` the stoxly convention
+        applies (verified against the live API 2026-09-26): `price` is the
+        per-share gross dividend, `quantity × price` is the gross total, `taxes`
+        is the withholding tax, and `totalAmount` is the **net** (gross − taxes).
+        BUY/SELL rows keep `totalAmount = quantity × price + fees`.
       allOf:
         - $ref: '#/components/schemas/FeeFxFields'
         - type: object
@@ -1415,6 +1421,10 @@ components:
             quantity: { type: number }
             price: { type: number }
             fees: { type: number }
+            taxes:
+              type: number
+              nullable: true
+              description: Withholding tax on a DIVIDEND (gross − taxes = net totalAmount); null otherwise
             totalAmount: { type: number }
             currency: { type: string }
             priceCurrency: { type: string }
@@ -1447,6 +1457,10 @@ components:
               type: number
               nullable: true
               description: Pre-split/pre-restatement price; frozen at creation
+            notes:
+              type: string
+              nullable: true
+              description: Optional user note on the transaction (e.g. dividend remittance details)
             labels:
               type: array
               items: { $ref: '#/components/schemas/Label' }
@@ -1492,6 +1506,16 @@ components:
             currency: { type: string }
             fees: { type: number }
             feesType: { type: string, enum: [fixed, pct] }
+            taxes:
+              type: number
+              nullable: true
+              description: >-
+                Withholding tax on a DIVIDEND (nullable, ≥ 0). When set for
+                `type: DIVIDEND`, totalAmount is stored net (quantity × price − taxes).
+            notes:
+              type: string
+              nullable: true
+              description: Optional user note on the transaction
             executedAt: { type: string, format: date-time }
             walletId: { type: string, format: uuid }
     DepositRequest:
