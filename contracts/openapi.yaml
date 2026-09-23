@@ -709,6 +709,12 @@ components:
         sumOfCurrentPositionsValue: { type: number }
     DividendsData:
       type: object
+      description: >-
+        Instrument research dividend history (`history`) OR the portfolio's own
+        dividend rows (`totalDividends`/`count`/`items`) — see the exposing
+        endpoint. For portfolio items, gross = quantity × price, taxes is the
+        withholding tax, amount is the NET (gross − taxes) per the stoxly
+        convention, and convertedAmount is amount in the display currency.
       properties:
         history:
           type: array
@@ -721,6 +727,27 @@ components:
               amount: { type: number }
               currency: { type: string }
               type: { type: string }
+        totalDividends:
+          type: number
+          description: Sum of net dividend amounts in the display currency
+        count: { type: integer }
+        items:
+          type: array
+          items:
+            type: object
+            required: [symbol, date, quantity, gross, amount, currency]
+            properties:
+              symbol: { type: string }
+              instrumentName: { type: string, nullable: true }
+              date: { type: string }
+              quantity: { type: number }
+              gross: { type: number }
+              taxes: { type: number, nullable: true }
+              amount: { type: number }
+              currency: { type: string }
+              exchangeRate: { type: number, nullable: true }
+              convertedAmount: { type: number, nullable: true }
+              notes: { type: string, nullable: true }
     CalendarData:
       type: object
       properties:
