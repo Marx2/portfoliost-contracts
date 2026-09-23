@@ -715,6 +715,9 @@ components:
         endpoint. For portfolio items, gross = quantity × price, taxes is the
         withholding tax, amount is the NET (gross − taxes) per the stoxly
         convention, and convertedAmount is amount in the display currency.
+        The research `/dividends` endpoint always also sets `currency` +
+        `currencySource` (plan §49.6, currency is never null); the portfolio
+        endpoint does not.
       properties:
         history:
           type: array
@@ -727,6 +730,15 @@ components:
               amount: { type: number }
               currency: { type: string }
               type: { type: string }
+        currency:
+          type: string
+          description: >-
+            Research side only: the instrument's resolved trading currency —
+            always set (fallback "USD" only on total uncertainty), see
+            `currencySource` for how it was determined.
+        currencySource:
+          $ref: '#/components/schemas/CurrencySource'
+          description: Research side only — how `currency` was determined (§47).
         totalDividends:
           type: number
           description: Sum of net dividend amounts in the display currency
