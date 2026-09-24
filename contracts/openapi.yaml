@@ -1825,7 +1825,7 @@ components:
           items: { $ref: '#/components/schemas/ImportTransaction' }
     ImportTransaction:
       type: object
-      required: [externalId, portfolioName, executedAt, cashTx]
+      required: [externalId, portfolioName, executedAt]
       properties:
         externalId:
           type: string
