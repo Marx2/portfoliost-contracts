@@ -1825,6 +1825,32 @@ components:
         created:
           type: boolean
           description: true = just inserted (external_source tagged); false = already existed (not re-tagged)
+    ImportLabelBootstrapRequest:
+      type: object
+      required: [externalSource, labels]
+      properties:
+        externalSource: { type: string }
+        labels:
+          type: array
+          minItems: 1
+          maxItems: 200
+          description: Label names to ensure; idempotent per (user, name)
+          items: { type: string, minLength: 1, maxLength: 40 }
+    ImportLabelBootstrapResponse:
+      type: object
+      required: [labels]
+      properties:
+        labels:
+          type: array
+          items:
+            type: object
+            required: [name, id]
+            properties:
+              name: { type: string }
+              id: { type: string, format: uuid }
+              created:
+                type: boolean
+                description: true = just created; false = already existed
     ImportTransactionsRequest:
       type: object
       required: [source, transactions]
@@ -1922,6 +1948,16 @@ components:
               description: SHORT marks a short-option open (position-creating, regardless of type)
             optionType: { type: string, enum: [CALL, PUT], nullable: true }
             contractSize: { type: number, nullable: true }
+            positionLabels:
+              type: array
+              maxItems: 20
+              description: Label names to attach to the row's open position (resolved server-side per user; unknown names are a row error)
+              items: { type: string, minLength: 1, maxLength: 40 }
+            transactionLabels:
+              type: array
+              maxItems: 20
+              description: Label names to attach to the row's portfolio transaction (same resolution as positionLabels)
+              items: { type: string, minLength: 1, maxLength: 40 }
     ImportTransactionsResponse:
       type: object
       required: [inserted, skipped, errors]
@@ -3996,6 +4032,33 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ImportPortfolioBootstrapResponse' }
+        '401':
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '422':
+          description: Malformed payload
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+  /import/labels/bootstrap:
+    post:
+      tags: [Wallets]
+      summary: Idempotently ensure labels exist by name (palette-colored when created)
+      operationId: importLabelBootstrap
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ImportLabelBootstrapRequest' }
+      responses:
+        '200':
+          description: Labels ensured
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ImportLabelBootstrapResponse' }
         '401':
           description: Missing or invalid token
           content:
