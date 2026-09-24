@@ -773,34 +773,16 @@ components:
         currency: { type: string }
         earnings:
           type: array
-          items:
-            type: object
-            required: [date]
-            properties:
-              date: { type: string }
-              title: { type: string }
-              year: { type: integer }
-              quarter: { type: integer }
+          items: { $ref: '#/components/schemas/CalendarEarningsItem' }
         exDividend:
           type: array
-          items:
-            type: object
-            required: [date]
-            properties:
-              date: { type: string }
-              title: { type: string }
-              year: { type: integer }
-              amount: { type: number }
+          items: { $ref: '#/components/schemas/CalendarExDividendItem' }
         dividend:
           type: array
-          items:
-            type: object
-            required: [date]
-            properties:
-              date: { type: string }
-              title: { type: string }
-              year: { type: integer }
-              amount: { type: number }
+          items: { $ref: '#/components/schemas/CalendarDividendItem' }
+        holdings:
+          type: array
+          items: { $ref: '#/components/schemas/CalendarHolding' }
         upcoming:
           type: array
           items:
@@ -827,6 +809,46 @@ components:
               title: { type: string }
               amount: { type: number, nullable: true }
               quarter: { type: integer, nullable: true }
+    CalendarEarningsItem:
+      type: object
+      required: [date]
+      properties:
+        date: { type: string }
+        title: { type: string }
+        year: { type: integer }
+        quarter: { type: integer }
+    CalendarExDividendItem:
+      type: object
+      required: [date]
+      properties:
+        date: { type: string }
+        title: { type: string }
+        year: { type: integer }
+        amount: { type: number }
+    CalendarDividendItem:
+      type: object
+      required: [date]
+      properties:
+        date: { type: string }
+        title: { type: string }
+        year: { type: integer }
+        amount: { type: number }
+    CalendarHolding:
+      type: object
+      required: [symbol]
+      properties:
+        symbol: { type: string }
+        companyName: { type: string }
+        currency: { type: string }
+        earnings:
+          type: array
+          items: { $ref: '#/components/schemas/CalendarEarningsItem' }
+        exDividend:
+          type: array
+          items: { $ref: '#/components/schemas/CalendarExDividendItem' }
+        dividend:
+          type: array
+          items: { $ref: '#/components/schemas/CalendarDividendItem' }
     SeasonalityData:
       type: object
       properties:
