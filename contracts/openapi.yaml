@@ -22,7 +22,6 @@ tags:
   - name: Instruments
   - name: Charting
   - name: Portfolios
-  - name: Wallets
   - name: Watchlists
   - name: Copilot
   - name: Misc
@@ -46,11 +45,6 @@ components:
       schema: { type: string }
       description: Instrument symbol, e.g. AAPL or AAPL.US
     portfolioId:
-      name: id
-      in: path
-      required: true
-      schema: { type: string, format: uuid }
-    walletId:
       name: id
       in: path
       required: true
@@ -1047,7 +1041,7 @@ components:
     # ─── Portfolios ────────────────────────────────────────────
     Portfolio:
       type: object
-      required: [id, userId, name, strategy, type, currency, walletId, totalInvested, currentValue, isPublic, isMarginEnabled, createdAt, updatedAt]
+      required: [id, userId, name, strategy, type, totalInvested, currentValue, isPublic, isMarginEnabled, createdAt, updatedAt]
       properties:
         id: { type: string, format: uuid }
         userId: { type: string, format: uuid }
@@ -1055,9 +1049,7 @@ components:
         description: { type: string, nullable: true }
         strategy: { type: string }
         type: { type: string }
-        currency: { type: string }
         baseCurrency: { type: string }
-        walletId: { type: string, format: uuid }
         totalInvested: { type: number }
         currentValue: { type: number }
         isPublic: { type: boolean }
@@ -1072,6 +1064,9 @@ components:
             totalReturn: { type: number }
             openPositions: { type: integer }
             unrealizedGainLoss: { type: number }
+        cash:
+          $ref: '#/components/schemas/PortfolioCash'
+          description: Portfolio-native cash position (plan §62)
     CreatePortfolioRequest:
       type: object
       required: [name]
@@ -1106,6 +1101,62 @@ components:
         externalCapitalBasisSource: { type: string, nullable: true }
         externalCapitalSuppressedReason: { type: string, nullable: true }
         externalCapitalReturnBasisKind: { type: string, nullable: true }
+        totalCash: { type: number, description: Total cash across all portfolios, base currency (Σ per-currency balances converted) }
+        cashBreakdown:
+          type: array
+          description: Per-currency cash summary (dashboard cash card)
+          items:
+            type: object
+            required: [currency, balance]
+            properties:
+              currency: { type: string }
+              balance: { type: number }
+              weight: { type: number, nullable: true }
+    PortfolioCash:
+      description: Portfolio-native cash position (plan §62) — per-currency balances derived by transaction replay
+      type: object
+      required: [baseCurrency, balances, total]
+      properties:
+        baseCurrency: { type: string }
+        balances:
+          type: array
+          items:
+            type: object
+            required: [currency, balance]
+            properties:
+              currency: { type: string }
+              balance: { type: number, description: Balance in that currency }
+        total: { type: number, description: Base-currency total, server-computed }
+    PortfolioCashHistory:
+      description: Cash balance history — data[].balance is the base-currency total of all currency balances at that date
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: array
+          items:
+            type: object
+            required: [date, balance, change, percentChange, high, low]
+            properties:
+              date: { type: string, format: date-time }
+              balance: { type: number }
+              change: { type: number }
+              percentChange: { type: number, nullable: true }
+              high: { type: number }
+              low: { type: number }
+        meta:
+          type: object
+          required: [period, resolution, high, low, average, startDate, endDate, change]
+          properties:
+            period: { type: string }
+            resolution: { type: string }
+            high: { type: number }
+            low: { type: number }
+            average: { type: number }
+            startDate: { type: string, format: date-time }
+            endDate: { type: string, format: date-time }
+            change: { type: number }
+            percentChange: { type: number, nullable: true }
     HeldStock:
       type: object
       properties:
@@ -1407,6 +1458,8 @@ components:
             positions:
               type: array
               items: { $ref: '#/components/schemas/PositionSummary' }
+            cash:
+              $ref: '#/components/schemas/PortfolioCash'
     PositionSummary:
       type: object
       required: [id, portfolioId, symbol, assetType, quantity, avgCostBasis, totalCostBasis, currentPrice, marketValue, realizedGainLoss, unrealizedGainLoss, sector, industry, country, purchaseCurrency, stockCurrency, contractSize, isCfd, displayCurrency, instrumentAvgCostBasis]
@@ -1476,12 +1529,11 @@ components:
       allOf:
         - $ref: '#/components/schemas/FeeFxFields'
         - type: object
-          required: [id, portfolioId, portfolioName, walletId, type, instrumentSymbol, instrumentName, quantity, price, fees, totalAmount, currency, priceCurrency, instrumentCurrency, assetType, isGift, synthesizedOpeningLot, executedAt, createdAt, displayCurrency, convertedTotalAmount, convertedPrice, convertedFees]
+          required: [id, portfolioId, portfolioName, type, instrumentSymbol, instrumentName, quantity, price, fees, totalAmount, currency, priceCurrency, instrumentCurrency, assetType, isGift, synthesizedOpeningLot, executedAt, createdAt, displayCurrency, convertedTotalAmount, convertedPrice, convertedFees]
           properties:
             id: { type: string, format: uuid }
             portfolioId: { type: string, format: uuid }
             portfolioName: { type: string }
-            walletId: { type: string, format: uuid }
             positionId: { type: string, format: uuid, nullable: true }
             type: { type: string }
             instrumentSymbol: { type: string }
@@ -1559,7 +1611,7 @@ components:
         feeExchangeRate:
           type: number
           nullable: true
-          description: Fee-currency -> transaction/wallet-currency rate for settlement.
+          description: Fee-currency -> transaction-currency rate for settlement.
     CreateTransactionRequest:
       type: object
       allOf:
@@ -1585,43 +1637,39 @@ components:
               nullable: true
               description: Optional user note on the transaction
             executedAt: { type: string, format: date-time }
-            walletId: { type: string, format: uuid }
-    DepositRequest:
+    DepositCashRequest:
       allOf:
         - $ref: '#/components/schemas/FeeFxFields'
         - type: object
+          required: [amount]
+          properties:
+            amount: { type: number }
+            currency: { type: string, description: Defaults to the portfolio baseCurrency; any registry currency allowed }
+            description: { type: string }
+            transactionDate: { type: string }
+    WithdrawCashRequest:
+      allOf:
+        - $ref: '#/components/schemas/FeeFxFields'
+        - type: object
+          required: [amount]
+          properties:
+            amount: { type: number }
+            currency: { type: string, description: Defaults to the portfolio baseCurrency; any registry currency allowed }
+            description: { type: string }
+            transactionDate: { type: string }
+            paymentMethod: { type: string }
+    TransferCashRequest:
+      allOf:
+        - $ref: '#/components/schemas/FeeFxFields'
+        - type: object
+          required: [amount, currency, toPortfolioId]
           properties:
             amount: { type: number }
             currency: { type: string }
             description: { type: string }
-            transaction_date: { type: string }
-            fees: { type: number }
-            fees_type: { type: string, enum: [fixed, pct] }
-    WithdrawRequest:
-      allOf:
-        - $ref: '#/components/schemas/FeeFxFields'
-        - type: object
-          properties:
-            amount: { type: number }
-            currency: { type: string }
-            description: { type: string }
-            transaction_date: { type: string }
-            payment_method: { type: string }
-            fees: { type: number }
-            fees_type: { type: string, enum: [fixed, pct] }
-    TransferRequest:
-      allOf:
-        - $ref: '#/components/schemas/FeeFxFields'
-        - type: object
-          properties:
-            amount: { type: number }
-            currency: { type: string }
-            description: { type: string }
-            transfer_date: { type: string }
-            to_wallet_id: { type: string, format: uuid }
-            fees: { type: number }
-            fees_type: { type: string, enum: [fixed, pct] }
-            targetAmount: { type: number, nullable: true }
+            transactionDate: { type: string }
+            toPortfolioId: { type: string, format: uuid }
+            targetAmount: { type: number, nullable: true, description: D22 elastic target leg; server-computed when omitted }
             targetFxRate: { type: number, nullable: true }
     CurrencyInfo:
       type: object
@@ -1640,88 +1688,28 @@ components:
           type: array
           items: { $ref: '#/components/schemas/CurrencyInfo' }
 
-    # ─── Wallets ───────────────────────────────────────────────
-    CashWallet:
-      type: object
-      required: [id, userId, name, currency, balance, availableBalance, isDefault, createdAt, updatedAt]
-      properties:
-        id: { type: string, format: uuid }
-        userId: { type: string, format: uuid }
-        name: { type: string }
-        currency: { type: string }
-        balance: { type: number }
-        availableBalance: { type: number }
-        isDefault: { type: boolean }
-        createdAt: { type: string, format: date-time }
-        updatedAt: { type: string, format: date-time }
-    WalletsTotalBalance:
-      type: object
-      properties:
-        totalBalance: { type: number }
-        totalAvailableBalance: { type: number }
-        baseCurrency: { type: string }
-        walletBreakdown:
-          type: array
-          items:
-            type: object
-            properties:
-              id: { type: string }
-              name: { type: string }
-              balance: { type: number }
-              availableBalance: { type: number }
-              currency: { type: string }
-              weight: { type: number }
-    BalanceHistory:
-      type: object
-      required: [data, meta]
-      properties:
-        data:
-          type: array
-          items:
-            type: object
-            required: [date, balance, change, percentChange, high, low]
-            properties:
-              date: { type: string, format: date-time }
-              balance: { type: number }
-              change: { type: number }
-              percentChange: { type: number, nullable: true }
-              high: { type: number }
-              low: { type: number }
-        meta:
-          type: object
-          required: [period, resolution, high, low, average, startDate, endDate, change]
-          properties:
-            period: { type: string }
-            resolution: { type: string }
-            high: { type: number }
-            low: { type: number }
-            average: { type: number }
-            startDate: { type: string, format: date-time }
-            endDate: { type: string, format: date-time }
-            change: { type: number }
-            percentChange: { type: number, nullable: true }
+    # ─── Portfolio cash (plan §62) ─────────────────────────────────────
     CashTransaction:
       allOf:
         - $ref: '#/components/schemas/FeeFxFields'
         - type: object
-          required: [id, walletId, type, amount, currency, status, createdAt]
+          required: [id, portfolioId, type, amount, currency, status, createdAt]
           properties:
             id: { type: string, format: uuid }
-            walletId: { type: string, format: uuid }
+            portfolioId: { type: string, format: uuid }
             type: { type: string }
             amount: { type: number }
             currency: { type: string }
             status: { type: string }
             createdAt: { type: string, format: date-time }
             description: { type: string, nullable: true }
-            transaction_date: { type: string, nullable: true }
-            payment_method: { type: string, nullable: true }
+            transactionDate: { type: string, nullable: true }
+            paymentMethod: { type: string, nullable: true }
             fees: { type: number, nullable: true }
-            fees_type: { type: string, nullable: true }
-            to_wallet_id: { type: string, format: uuid, nullable: true }
-            new_balance: { type: number, nullable: true }
-            remaining_balance: { type: number, nullable: true }
-            walletName: { type: string, nullable: true }
+            feesType: { type: string, nullable: true }
+            toPortfolioId: { type: string, format: uuid, nullable: true }
+            balanceAfter: { type: number, nullable: true, description: Row's own-currency balance after this tx (ledger-derived, window sum, no storage) }
+            portfolioName: { type: string, nullable: true }
             externalSource:
               type: string
               nullable: true
@@ -1736,11 +1724,11 @@ components:
 
     RecentCashTransaction:
       type: object
-      required: [id, walletId, type, displayLabel, amount, currency, date, createdAt, isInternalTransfer]
+      required: [id, portfolioId, type, displayLabel, amount, currency, date, createdAt, isInternalTransfer]
       properties:
         id: { type: string, format: uuid }
-        walletId: { type: string, format: uuid }
-        walletName: { type: string, nullable: true }
+        portfolioId: { type: string, format: uuid }
+        portfolioName: { type: string, nullable: true }
         type: { type: string }
         displayLabel: { type: string }
         amount: { type: string }
@@ -1750,7 +1738,7 @@ components:
         date: { type: string }
         description: { type: string, nullable: true }
         createdAt: { type: string, format: date-time }
-        portfolioId: { type: string, format: uuid, nullable: true }
+        toPortfolioId: { type: string, format: uuid, nullable: true }
         fees: { type: number, nullable: true }
         taxes: { type: number, nullable: true }
         isInternalTransfer: { type: boolean }
@@ -1774,38 +1762,6 @@ components:
             totalPages: { type: integer }
 
     # ─── Import API (wallets-import-api §23) ─────────────────
-    ImportWalletBootstrapRequest:
-      type: object
-      required: [externalSource, wallets]
-      properties:
-        externalSource:
-          type: string
-          description: Source tag; created wallets get external_source = this value
-        wallets:
-          type: array
-          items:
-            type: object
-            required: [name, currency]
-            properties:
-              name: { type: string }
-              currency: { type: string }
-              baseCurrency: { type: string }
-    ImportWalletBootstrapResponse:
-      type: object
-      properties:
-        wallets:
-          type: array
-          items:
-            type: object
-            required: [id, name, currency, created]
-            properties:
-              id: { type: string, format: uuid }
-              name: { type: string }
-              currency: { type: string }
-              baseCurrency: { type: string }
-              created:
-                type: boolean
-                description: true = just inserted (external_source tagged); false = already existed (not re-tagged)
     ImportPortfolioBootstrapRequest:
       type: object
       required: [externalSource, name, currency]
@@ -1869,20 +1825,20 @@ components:
           items: { $ref: '#/components/schemas/ImportTransaction' }
     ImportTransaction:
       type: object
-      required: [externalId, walletName, executedAt, walletTx]
+      required: [externalId, portfolioName, executedAt, cashTx]
       properties:
         externalId:
           type: string
           description: Stable dedup key derived by the importer (e.g. SHA256 of source row fields)
-        walletName:
+        portfolioName:
           type: string
-          description: Must exist for this user; use wallets/bootstrap to create missing ones
+          description: Must exist for this user; use portfolios/bootstrap to create missing ones
         executedAt: { type: string, format: date-time }
-        walletTx: { $ref: '#/components/schemas/ImportWalletTx' }
+        cashTx: { $ref: '#/components/schemas/ImportPortfolioCashTx' }
         portfolioTx:
           $ref: '#/components/schemas/ImportPortfolioTx'
           description: Omit for pure-cash events (DEPOSIT/WITHDRAWAL)
-    ImportWalletTx:
+    ImportPortfolioCashTx:
       allOf:
         - $ref: '#/components/schemas/FeeFxFields'
         - type: object
@@ -1890,10 +1846,10 @@ components:
           properties:
             type:
               type: string
-              enum: [DEPOSIT, WITHDRAWAL, TRANSFER, INVEST, SELL, DIVIDEND, FEE, INTEREST, ADJUSTMENT]
+              enum: [DEPOSIT, WITHDRAWAL, TRANSFER]
             amount:
               type: number
-              description: Signed; negative = cash out. ADJUSTMENT allows 0 (split markers)
+              description: Signed; negative = cash out
             currency: { type: string }
             description: { type: string, nullable: true }
             transactionDate: { type: string, format: date, nullable: true }
@@ -1901,9 +1857,15 @@ components:
             paymentMethod: { type: string, nullable: true }
             fees: { type: number, nullable: true }
             feesType: { type: string, enum: [fixed, pct], nullable: true }
-            taxes: { type: number, nullable: true }
+            exchangeRate: { type: number, nullable: true }
+            toPortfolioName: { type: string, nullable: true, description: TRANSFER target; must exist and differ from the source portfolio }
+            targetAmount: { type: number, nullable: true }
             reference: { type: string, nullable: true }
-            portfolioId: { type: string, format: uuid, nullable: true }
+            labels:
+              type: array
+              maxItems: 20
+              description: Label names to bootstrap + attach (unknown name → row error)
+              items: { type: string, minLength: 1, maxLength: 40 }
     ImportPortfolioTx:
       allOf:
         - $ref: '#/components/schemas/FeeFxFields'
@@ -1977,7 +1939,7 @@ components:
         syncRun: { $ref: '#/components/schemas/SyncRun' }
     SyncRun:
       type: object
-      required: [id, externalSource, spreadsheetId, sheet, status, insertedWtx, insertedPtx, skipped]
+      required: [id, externalSource, spreadsheetId, sheet, status, insertedCashTx, insertedPtx, skipped]
       properties:
         id: { type: integer }
         externalSource: { type: string }
@@ -1988,7 +1950,7 @@ components:
         startedAt: { type: string, format: date-time, nullable: true }
         completedAt: { type: string, format: date-time, nullable: true }
         error: { type: string, nullable: true }
-        insertedWtx: { type: integer }
+        insertedCashTx: { type: integer }
         insertedPtx: { type: integer }
         skipped: { type: integer }
     SyncRunsResponse:
@@ -2004,16 +1966,14 @@ components:
         deleted:
           type: object
           properties:
-            walletTransactions: { type: integer }
+            cashTransactions: { type: integer }
             portfolios: { type: integer }
-            wallets: { type: integer }
             syncRuns: { type: integer }
             positions: { type: integer }
             portfolioTransactions: { type: integer }
             valueSnapshots: { type: integer }
             shares: { type: integer }
             portfolioBackfillMetadata: { type: integer }
-            nulledWalletRefs: { type: integer }
     ApplySplitRequest:
       type: object
       required: [symbol, factor, effectiveDate]
@@ -3746,95 +3706,27 @@ paths:
             application/json:
               type: array
               items: { $ref: '#/components/schemas/Label' }
-  /wallets/{walletId}/transactions/{transactionId}/labels:
+  /portfolios/{id}/cash:
     parameters:
-      - $ref: '#/components/parameters/walletId'
-      - name: transactionId
-        in: path
-        required: true
-        schema: { type: string, format: uuid }
-    post:
+      - $ref: '#/components/parameters/portfolioId'
+    get:
       tags: [Portfolios]
-      summary: Set labels on a wallet transaction (replace semantics)
-      operationId: setWalletTransactionLabels
-      security: [{ bearerAuth: [] }]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/SetLabelsRequest' }
-      responses:
-        '200':
-          description: Labels set
-          content:
-            application/json:
-              type: array
-              items: { $ref: '#/components/schemas/Label' }
-
-  # ─── Wallets ─────────────────────────────────────────────────
-  /currencies:
-    get:
-      tags: [Misc]
-      summary: Available currencies (auto-updated from FX imports)
-      operationId: listCurrencies
-      responses:
-        '200':
-          description: Supported currencies
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/CurrenciesResponse' }
-
-  /wallets:
-    get:
-      tags: [Wallets]
-      summary: List cash wallets
-      operationId: listWallets
+      summary: Portfolio cash position (per-currency balances + base total)
+      operationId: getPortfolioCash
       security: [{ bearerAuth: [] }]
       responses:
         '200':
-          description: Wallets
+          description: Cash position
           content:
             application/json:
-              type: array
-              items: { $ref: '#/components/schemas/CashWallet' }
-    post:
-      tags: [Wallets]
-      summary: Create wallet
-      operationId: createWallet
-      security: [{ bearerAuth: [] }]
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                name: { type: string }
-                currency: { type: string }
-      responses:
-        '201':
-          description: Created
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/CashWallet' }
-  /wallets/total-balance:
-    get:
-      tags: [Wallets]
-      summary: Total wallet balance
-      operationId: getWalletsTotalBalance
-      security: [{ bearerAuth: [] }]
-      responses:
-        '200':
-          description: Total balance
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/WalletsTotalBalance' }
-  /wallets/{id}/balance-history:
+              schema: { $ref: '#/components/schemas/PortfolioCash' }
+  /portfolios/{id}/cash/balance-history:
     parameters:
-      - $ref: '#/components/parameters/walletId'
+      - $ref: '#/components/parameters/portfolioId'
     get:
-      tags: [Wallets]
-      summary: Wallet balance history
-      operationId: getWalletBalanceHistory
+      tags: [Portfolios]
+      summary: Portfolio cash balance history (base-currency totals)
+      operationId: getPortfolioCashHistory
       security: [{ bearerAuth: [] }]
       parameters:
         - name: period
@@ -3845,74 +3737,17 @@ paths:
           schema: { type: string }
       responses:
         '200':
-          description: Balance history
+          description: Cash balance history
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/BalanceHistory' }
-  /wallets/{id}/deposits:
+              schema: { $ref: '#/components/schemas/PortfolioCashHistory' }
+  /portfolios/{id}/cash/transactions:
     parameters:
-      - $ref: '#/components/parameters/walletId'
-    post:
-      tags: [Wallets]
-      summary: Deposit cash
-      operationId: depositCash
-      security: [{ bearerAuth: [] }]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/DepositRequest' }
-      responses:
-        '201':
-          description: Deposited
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/CashTransaction' }
-  /wallets/{id}/withdrawals:
-    parameters:
-      - $ref: '#/components/parameters/walletId'
-    post:
-      tags: [Wallets]
-      summary: Withdraw cash
-      operationId: withdrawCash
-      security: [{ bearerAuth: [] }]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/WithdrawRequest' }
-      responses:
-        '201':
-          description: Withdrawn
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/CashTransaction' }
-  /wallets/{id}/transfers:
-    parameters:
-      - $ref: '#/components/parameters/walletId'
-    post:
-      tags: [Wallets]
-      summary: Transfer between wallets
-      operationId: transferCash
-      security: [{ bearerAuth: [] }]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/TransferRequest' }
-      responses:
-        '201':
-          description: Transferred
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/CashTransaction' }
-  /wallets/{id}/transactions:
-    parameters:
-      - $ref: '#/components/parameters/walletId'
+      - $ref: '#/components/parameters/portfolioId'
     get:
-      tags: [Wallets]
-      summary: Cash transactions
-      operationId: getCashTransactions
+      tags: [Portfolios]
+      summary: Portfolio cash transactions (external rows only)
+      operationId: getPortfolioCashTransactions
       security: [{ bearerAuth: [] }]
       parameters:
         - name: page
@@ -3927,14 +3762,71 @@ paths:
           description: Comma-separated label ids; AND filter (entity must have all)
       responses:
         '200':
-          description: Transactions
+          description: Cash transactions
           content:
             application/json:
               schema: { $ref: '#/components/schemas/PageResponse' }
-  /wallets/recent-transactions:
+  /portfolios/{id}/cash/deposits:
+    parameters:
+      - $ref: '#/components/parameters/portfolioId'
+    post:
+      tags: [Portfolios]
+      summary: Deposit cash into a portfolio
+      operationId: depositCash
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DepositCashRequest' }
+      responses:
+        '201':
+          description: Deposited
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CashTransaction' }
+  /portfolios/{id}/cash/withdrawals:
+    parameters:
+      - $ref: '#/components/parameters/portfolioId'
+    post:
+      tags: [Portfolios]
+      summary: Withdraw cash from a portfolio
+      operationId: withdrawCash
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/WithdrawCashRequest' }
+      responses:
+        '201':
+          description: Withdrawn
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CashTransaction' }
+  /portfolios/{id}/cash/transfers:
+    parameters:
+      - $ref: '#/components/parameters/portfolioId'
+    post:
+      tags: [Portfolios]
+      summary: Transfer cash between portfolios
+      operationId: transferCash
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TransferCashRequest' }
+      responses:
+        '201':
+          description: Transferred
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CashTransaction' }
+  /portfolios/cash/recent-transactions:
     get:
-      tags: [Wallets]
-      summary: Recent cash transactions across all wallets
+      tags: [Portfolios]
+      summary: Recent cash transactions across all portfolios
       operationId: getRecentCashTransactions
       security: [{ bearerAuth: [] }]
       parameters:
@@ -3946,20 +3838,24 @@ paths:
         - name: sortOrder
           in: query
           schema: { type: string, enum: [asc, desc], default: desc }
+        - name: labels
+          in: query
+          schema: { type: string }
+          description: Comma-separated label ids; AND filter (entity must have all)
       responses:
         '200':
-          description: Recent transactions
+          description: Recent cash transactions
           content:
             application/json:
               schema: { $ref: '#/components/schemas/RecentCashTransactionsPage' }
-  /wallets/transactions/{id}:
+  /portfolios/cash/transactions/{txId}:
     parameters:
-      - name: id
+      - name: txId
         in: path
         required: true
         schema: { type: string, format: uuid }
     patch:
-      tags: [Wallets]
+      tags: [Portfolios]
       summary: Update a cash transaction
       operationId: updateCashTransaction
       security: [{ bearerAuth: [] }]
@@ -3980,44 +3876,52 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/RecentCashTransaction' }
     delete:
-      tags: [Wallets]
+      tags: [Portfolios]
       summary: Delete a cash transaction
       operationId: deleteCashTransaction
       security: [{ bearerAuth: [] }]
       responses:
         '204':
           description: Deleted
-  # ─── Import API (wallets-import-api §23) ────────────────────
-  /import/wallets/bootstrap:
+  /portfolios/cash/transactions/{txId}/labels:
+    parameters:
+      - name: txId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
     post:
-      tags: [Wallets]
-      summary: Idempotently ensure wallets exist, tagged with external_source
-      operationId: importWalletBootstrap
+      tags: [Portfolios]
+      summary: Set labels on a cash transaction (replace semantics)
+      operationId: setCashTransactionLabels
       security: [{ bearerAuth: [] }]
       requestBody:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/ImportWalletBootstrapRequest' }
+            schema: { $ref: '#/components/schemas/SetLabelsRequest' }
       responses:
         '200':
-          description: Wallets ensured
+          description: Labels set
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/ImportWalletBootstrapResponse' }
-        '401':
-          description: Missing or invalid token
+              type: array
+              items: { $ref: '#/components/schemas/Label' }
+  /currencies:
+    get:
+      tags: [Misc]
+      summary: Available currencies (auto-updated from FX imports)
+      operationId: listCurrencies
+      responses:
+        '200':
+          description: Supported currencies
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/ErrorResponse' }
-        '422':
-          description: Malformed payload
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              schema: { $ref: '#/components/schemas/CurrenciesResponse' }
+
+  # ─── Import API (wallets-import-api §23) ────────────────────
   /import/portfolios/bootstrap:
     post:
-      tags: [Wallets]
+      tags: [Portfolios]
       summary: Idempotently ensure a portfolio exists, tagged with external_source
       operationId: importPortfolioBootstrap
       security: [{ bearerAuth: [] }]
@@ -4044,7 +3948,7 @@ paths:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
   /import/labels/bootstrap:
     post:
-      tags: [Wallets]
+      tags: [Portfolios]
       summary: Idempotently ensure labels exist by name (palette-colored when created)
       operationId: importLabelBootstrap
       security: [{ bearerAuth: [] }]
@@ -4071,7 +3975,7 @@ paths:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
   /import/transactions:
     post:
-      tags: [Wallets]
+      tags: [Portfolios]
       summary: Submit an idempotent batch of max 500 imported transaction events
       operationId: importTransactions
       security: [{ bearerAuth: [] }]
@@ -4098,7 +4002,7 @@ paths:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
   /import/sync-runs:
     get:
-      tags: [Wallets]
+      tags: [Portfolios]
       summary: List import runs for the authenticated user
       operationId: listSyncRuns
       security: [{ bearerAuth: [] }]
@@ -4129,7 +4033,7 @@ paths:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
   /import/sync-runs/{id}:
     delete:
-      tags: [Wallets]
+      tags: [Portfolios]
       summary: Delete a sync run record (does not delete imported transactions)
       operationId: deleteSyncRun
       security: [{ bearerAuth: [] }]
@@ -4153,7 +4057,7 @@ paths:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
   /import/source/{externalSource}:
     delete:
-      tags: [Wallets]
+      tags: [Portfolios]
       summary: Wipe all data tagged with this source for the authenticated user
       operationId: wipeImportSource
       security: [{ bearerAuth: [] }]
