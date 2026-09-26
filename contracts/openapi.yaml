@@ -1873,7 +1873,7 @@ components:
           required: [portfolioId, type, instrumentSymbol, quantity, price, currency]
           properties:
             portfolioId: { type: string, format: uuid }
-            type: { type: string, enum: [BUY, SELL, DIVIDEND] }
+            type: { type: string, enum: [BUY, SELL, DIVIDEND, EXPIRATION] }
             instrumentSymbol: { type: string }
             instrumentName: { type: string, nullable: true }
             assetType: { type: string, default: STOCK }
@@ -1907,7 +1907,7 @@ components:
               type: string
               enum: [LONG, SHORT]
               nullable: true
-              description: SHORT marks a short-option open (position-creating, regardless of type)
+              description: SHORT marks a short-option open (position-creating, regardless of type); for `type: EXPIRATION` it closes the short-option lot at zero value (zero cash effect)
             optionType: { type: string, enum: [CALL, PUT], nullable: true }
             contractSize: { type: number, nullable: true }
             positionLabels:
