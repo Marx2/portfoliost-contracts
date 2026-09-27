@@ -1354,6 +1354,15 @@ components:
             properties:
               month: { type: string }
               returnPercent: { type: number }
+        # §63.8 — held positions the latest backfill pass had NO price bar for.
+        # Non-empty → the `value` series is a *partial* sum (silently
+        # under-reported); the SPA should flag it instead of presenting a wrong
+        # total. Absent/null = every held symbol priced.
+        gapSymbols:
+          type: array
+          nullable: true
+          items:
+            type: string
     PortfolioSnapshot:
       type: object
       properties:
