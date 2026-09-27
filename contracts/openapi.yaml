@@ -1911,7 +1911,7 @@ components:
               type: string
               enum: [LONG, SHORT]
               nullable: true
-              description: SHORT marks a short-option open (position-creating, regardless of type); for `type: EXPIRATION` it closes the short-option lot at zero value (zero cash effect)
+              description: "SHORT marks a short-option open (position-creating, regardless of type); for type=EXPIRATION it closes the short-option lot at zero value (zero cash effect)"
             optionType: { type: string, enum: [CALL, PUT], nullable: true }
             contractSize: { type: number, nullable: true }
             positionLabels:
