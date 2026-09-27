@@ -1322,6 +1322,10 @@ components:
                 properties:
                   date: { type: string }
                   value: { type: number }
+                  # Cumulative net money-in (deposits − withdrawals ± transfer
+                  # legs), same currency as `value` — the "invested" line the
+                  # performance chart overlays so value − invested = profit.
+                  invested: { type: number, nullable: true }
                   cumulativeTwr: { type: number }
                   cumulativeMwr: { type: number }
                   cumulativeSimple: { type: number }
