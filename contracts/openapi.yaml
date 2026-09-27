@@ -74,6 +74,17 @@ components:
       in: query
       schema: { type: string }
       description: Optional ISO-4217 target currency — prices are converted server-side (plan §48.2); same/absent value serves the native series
+    baseCurrency:
+      name: baseCurrency
+      in: query
+      schema: { type: string }
+      description: >-
+        Optional ISO-4217 currency the CALLER believes the prices are denominated in
+        (e.g. wallets passes the position's `instrumentCurrency`). Honoured only where
+        the server's own resolver is silent; a locally resolved base is never
+        overridden (plan §47, "never guess"). Without it, a ticker listed on several
+        venues in different currencies cannot be converted at all, which made
+        `currency` unusable for the caller's whole request (plan §63.10.5).
     limit:
       name: limit
       in: query
@@ -3019,6 +3030,7 @@ paths:
           required: true
           schema: { type: string, format: date }
         - $ref: '#/components/parameters/currency'
+        - $ref: '#/components/parameters/baseCurrency'
       responses:
         '200':
           description: Daily close-price series
