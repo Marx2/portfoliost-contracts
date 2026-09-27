@@ -1380,6 +1380,10 @@ components:
         allocation:
           type: object
           properties:
+            # §66.3 — the currency every row below is denominated in. The
+            # byCurrency rows are the exception and are labelled BY their own
+            # `name`, which is an ISO code.
+            currency: { type: string, minLength: 3, maxLength: 3, description: Currency of every allocation row below except byCurrency, whose rows carry their own ISO code in `name`. }
             byAsset:
               type: array
               items:
@@ -1424,10 +1428,11 @@ components:
                   value: { type: number }
             byCurrency:
               type: array
+              description: Each row is denominated in its OWN currency, which is its `name` as an ISO-4217 code — this is the one breakdown that is not in the allocation `currency`.
               items:
                 type: object
                 properties:
-                  name: { type: string }
+                  name: { type: string, description: ISO-4217 currency code for this row. }
                   value: { type: number }
         items:
           type: array
@@ -1514,8 +1519,12 @@ components:
         instrumentAvgCostBasis: { type: number }
     PortfolioSummaryMetrics:
       type: object
-      required: [totalValue, totalInvested, simpleReturnPercent, investmentReturnPercent, currencyImpactPercent, cumulativeDividends, totalDividends, positionValue, realizedGain, costBasis, unrealizedGainLoss, dayChangeAmount, dayChangePercent, dayChangeDate]
+      required: [currency, totalValue, totalInvested, simpleReturnPercent, investmentReturnPercent, currencyImpactPercent, cumulativeDividends, totalDividends, positionValue, realizedGain, costBasis, unrealizedGainLoss, dayChangeAmount, dayChangePercent, dayChangeDate]
       properties:
+        # §66.3 — the portfolio's base currency. Every amount on this object is
+        # denominated in it. It was absent, so the SPA had to guess (and did:
+        # `formatCurrency(portfolio.currentValue)` rendered PLN with a `$`).
+        currency: { type: string, minLength: 3, maxLength: 3, description: The portfolio's base currency (ISO-4217). Every amount on this object is denominated in it. }
         totalValue: { type: number }
         totalInvested: { type: number }
         simpleReturnPercent: { type: number }
