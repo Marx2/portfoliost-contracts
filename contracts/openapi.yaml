@@ -1088,21 +1088,67 @@ components:
         currency: { type: string }
         isPublic: { type: boolean }
     PortfolioTotalMetrics:
+      description: |
+        The dashboard headline aggregate, all amounts in `baseCurrency`.
+
+        §68 — the four headline figures, and what `totalValue` means changed:
+
+          instrumentsValue  positions only
+          cashValue         the cash BALANCE (not a flow)
+          totalValue        instrumentsValue + cashValue
+          totalInvested     net external cash flow (see below)
+
+        `totalValue` previously excluded cash, which made the headline disagree
+        with the portfolio cards by exactly the cash balance (§63.3). It now
+        means the whole account.
       type: object
+      required: [baseCurrency, instrumentsValue, cashValue, totalValue, totalInvested, portfolioBreakdown]
       properties:
-        totalValue: { type: number }
-        totalInvested: { type: number }
-        totalGainLoss: { type: number }
-        returnPercentage: { type: number }
+        instrumentsValue:
+          type: number
+          description: Open-position market value only, cash excluded, converted into baseCurrency. Σ of each position's own instrument currency at its own rate — never a raw cross-currency sum.
+        cashValue:
+          type: number
+          description: Cash balance across all portfolios in baseCurrency (Σ per-currency balances converted). Renamed from `totalCash` in §68 — a balance, not a flow. May be negative on a margin account, and must not be clamped.
+        totalValue:
+          type: number
+          description: 'The whole account: instrumentsValue + cashValue. CHANGED in §68 — this used to be positions-only, which is what made the headline miss cash.'
+        totalInvested:
+          type: number
+          description: |
+            Net external cash flow in baseCurrency: DEPOSIT − WITHDRAWAL ± TRANSFER legs, each at its own historical rate
+            (the §62 `externalCashInvested` basis, reported by `externalCapitalBasisSource`).
+
+            Transfers are part of this definition, not excluded. The honest
+            consequence: a transfer between two of the user's own portfolios
+            RAISES one portfolio's invested figure and LOWERS the other's. The
+            aggregate is unaffected because the legs net to zero, but a
+            per-portfolio number on this basis is not "capital you put in".
+        totalGainLoss:
+          type: number
+          description: 'totalValue − totalInvested. Moves with §68''s change to totalValue.'
+        returnPercentage:
+          type: number
+          description: totalGainLoss / totalInvested. Moves with §68's change to totalValue.
         baseCurrency: { type: string }
         portfolioBreakdown:
           type: array
+          description: Per-portfolio rows. §68 — each carries the same cash/instruments split, so Σ breakdown == the headline and a card can render its own split without a second request.
           items:
             type: object
+            required: [id, name, instrumentsValue, cashValue, totalValue, totalInvested]
             properties:
               id: { type: string }
               name: { type: string }
-              totalValue: { type: number }
+              instrumentsValue:
+                type: number
+                description: This portfolio's open positions only, converted into baseCurrency.
+              cashValue:
+                type: number
+                description: This portfolio's cash balance in baseCurrency. May be negative.
+              totalValue:
+                type: number
+                description: instrumentsValue + cashValue for this portfolio.
               totalInvested: { type: number }
               returnPercentage: { type: number }
               weight: { type: number }
@@ -1112,7 +1158,6 @@ components:
         externalCapitalBasisSource: { type: string, nullable: true }
         externalCapitalSuppressedReason: { type: string, nullable: true }
         externalCapitalReturnBasisKind: { type: string, nullable: true }
-        totalCash: { type: number, description: Total cash across all portfolios, base currency (Σ per-currency balances converted) }
         cashBreakdown:
           type: array
           description: Per-currency cash summary (dashboard cash card)
@@ -1519,20 +1564,26 @@ components:
         instrumentAvgCostBasis: { type: number }
     PortfolioSummaryMetrics:
       type: object
-      required: [currency, totalValue, totalInvested, simpleReturnPercent, investmentReturnPercent, currencyImpactPercent, cumulativeDividends, totalDividends, positionValue, realizedGain, costBasis, unrealizedGainLoss, dayChangeAmount, dayChangePercent, dayChangeDate]
+      required: [currency, totalValue, cashValue, totalInvested, simpleReturnPercent, investmentReturnPercent, currencyImpactPercent, cumulativeDividends, totalDividends, positionValue, realizedGain, costBasis, unrealizedGainLoss, dayChangeAmount, dayChangePercent, dayChangeDate]
       properties:
         # §66.3 — the portfolio's base currency. Every amount on this object is
         # denominated in it. It was absent, so the SPA had to guess (and did:
         # `formatCurrency(portfolio.currentValue)` rendered PLN with a `$`).
         currency: { type: string, minLength: 3, maxLength: 3, description: The portfolio's base currency (ISO-4217). Every amount on this object is denominated in it. }
-        totalValue: { type: number }
+        # §68 — totalValue includes cash, matching /total-metrics and the cards.
+        # positionValue IS the instruments component (positions only), so it is
+        # documented rather than duplicated under a second name — the same lesson
+        # as §67.2: do not add a field that already exists under another name.
+        # cashValue is new, and is what makes the split explicit on the card.
+        totalValue: { type: number, description: positionValue + cashValue (cash included, §68). Every amount here is converted into `currency`; a raw cross-currency sum is not acceptable. }
+        cashValue: { type: number, description: This portfolio's cash balance in `currency`. May be negative on a margin account. }
         totalInvested: { type: number }
         simpleReturnPercent: { type: number }
         investmentReturnPercent: { type: number }
         currencyImpactPercent: { type: number }
         cumulativeDividends: { type: number }
         totalDividends: { type: number }
-        positionValue: { type: number }
+        positionValue: { type: number, description: Open-position value only, cash excluded, each position converted into `currency`. This is the "instruments" component of totalValue. }
         realizedGain: { type: number }
         costBasis: { type: number }
         unrealizedGainLoss: { type: number }
