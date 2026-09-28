@@ -2,7 +2,7 @@
   "name": "@marx2/contracts",
   "version": "1.6.48",
   "type": "module",
-  "description": "Portfoliost API contract — OpenAPI spec shared by frontend and backend",
+  "description": "Portfoliost API contract \u2014 OpenAPI spec shared by frontend and backend",
   "main": "./openapi.yaml",
   "exports": {
     ".": "./openapi.yaml",
@@ -24,7 +24,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "test": "vitest run",
-    "lint": "python3 -c \"import yaml; yaml.safe_load(open('openapi.yaml')); print('openapi.yaml parses OK')\""
+    "lint": "python3 scripts_check_spec.py"
   },
   "repository": {
     "type": "git",

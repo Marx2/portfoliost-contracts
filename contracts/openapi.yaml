@@ -1155,9 +1155,6 @@ components:
               unpricedPositions: { type: integer, description: Open positions with no market value, excluded from instrumentsValue (§70). }
               priceAsOf: { type: string, format: date-time, nullable: true, description: Oldest resolved price timestamp for this portfolio's positions. }
               priceSource: { type: string, nullable: true, description: "'quote' or 'fallback' — whether the value is a live price or a remembered one." }
-        unpricedPositions: { type: integer, description: Open positions with no market value, excluded from totalValue (§70). }
-        priceAsOf: { type: string, format: date-time, nullable: true, description: Oldest resolved price timestamp across this portfolio's open positions. }
-        priceSource: { type: string, nullable: true, description: "'quote' or 'fallback' — whether the value is a live price or a remembered one." }
         externalCapitalReturnPercent: { type: number, nullable: true }
         externalCapitalReturnAmount: { type: number, nullable: true }
         externalCapitalBasis: { type: number, nullable: true }
@@ -1619,6 +1616,20 @@ components:
         dayChangeAmount: { type: number }
         dayChangePercent: { type: number }
         dayChangeDate: { type: string, format: date-time }
+        unpricedPositions:
+          type: integer
+          description: |
+            Open positions excluded from `totalValue` because no market value is known (§70).
+            They are NOT valued at their cost basis — a cost is not a price.
+        priceAsOf:
+          type: string
+          format: date-time
+          nullable: true
+          description: Oldest resolved price timestamp across this portfolio's open positions.
+        priceSource:
+          type: string
+          nullable: true
+          description: "'quote' or 'fallback' — whether the value is a live price or a remembered one."
         externalCapitalReturnPercent: { type: number, nullable: true }
         externalCapitalReturnAmount: { type: number, nullable: true }
         externalCapitalBasis: { type: number, nullable: true }
