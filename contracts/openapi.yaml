@@ -2031,7 +2031,24 @@ components:
               type: number
               nullable: true
               description: Pre-restatement unit price; frozen at creation
-            currency: { type: string }
+            currency:
+              type: string
+              description: >-
+                The currency the trade was PAID or SETTLED in. This is not
+                necessarily the instrument's listing currency — a broker will sell
+                a GBP-listed stock priced in PLN — so it must not be used as the
+                instrument's currency.
+            listingCurrency:
+              type: string
+              nullable: true
+              description: >-
+                The currency the instrument TRADES in, when the importer resolved
+                it. Takes precedence over `currency` for the stored
+                `instrumentCurrency`; `currency` is used only as a fallback. Set
+                it whenever the source is authoritative (a crypto quote pair, a
+                venue-qualified listing), and leave it null when the instrument's
+                currency is genuinely unknown — the "never guess" rule applies, and
+                a wrong listing currency is worse than a known-missing one.
             fees: { type: number, nullable: true }
             feesType: { type: string, enum: [fixed, pct], nullable: true }
             taxes: { type: number, nullable: true }
