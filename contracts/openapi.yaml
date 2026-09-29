@@ -763,6 +763,21 @@ components:
             properties:
               symbol: { type: string }
               instrumentName: { type: string, nullable: true }
+              assetType:
+                type: string
+                nullable: true
+                description: >-
+                  The instrument's asset class, for the shared identity block
+                  (`TickerBadge`). Nullable because the research-backed
+                  `history` shape has neither this nor `country`; the portfolio
+                  route fills both from the DIVIDEND transaction row. Never
+                  guessed.
+              country:
+                type: string
+                nullable: true
+                description: >-
+                  2-letter country code of the instrument (not the transaction's
+                  currency) — see `assetType`. Null when unknown.
               date: { type: string }
               quantity: { type: number }
               gross: { type: number }
@@ -992,6 +1007,20 @@ components:
       properties:
         symbol: { type: string }
         name: { type: string }
+        countryCode:
+          type: string
+          nullable: true
+          description: >-
+            2-letter country code for the shared identity block
+            (`TickerBadge`). Resolved from the provider's own ticker
+            reference; null when the symbol is not in it — never guessed
+            (§61.4).
+        assetType:
+          type: string
+          nullable: true
+          description: >-
+            Contract `InstrumentType` for the identity block. Same rule as
+            `countryCode` — null when the ticker reference has no row.
         price: { type: number }
         marketCap: { type: number }
         peRatio: { type: number }
