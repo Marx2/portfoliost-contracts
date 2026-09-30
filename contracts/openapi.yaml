@@ -2583,12 +2583,39 @@ paths:
   /auth/logout:
     post:
       tags: [Auth]
-      summary: Logout
+      summary: Revoke the caller's refresh session
       operationId: logout
-      security: [{ bearerAuth: [] }]
+      description: |
+        Deletes the server-side refresh session identified by the submitted
+        token's `jti`, so the session cannot be renewed. Idempotent: a missing
+        or already-revoked session is still a 200.
+
+        `id_token` is optional, and a client that omits it gets a 200 that
+        revokes nothing — the token is what identifies the session. Expiry is
+        not enforced, for the same reason as /auth/refresh.
+
+        Note: this does not end the Pocket-ID session itself. The client must
+        also navigate to Pocket-ID's end_session_endpoint to clear that.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id_token:
+                  type: string
+                  description: The caller's current bearer token; may be expired.
       responses:
-        '204':
+        '200':
           description: Logged out
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success]
+                properties:
+                  success: { type: boolean }
   /auth/refresh:
     post:
       tags: [Auth]
