@@ -8,7 +8,7 @@ info:
 
 servers:
   - url: http://localhost:8080/api
-    description: Via KrakenD (Docker Compose)
+    description: Via the dev nginx proxy (Docker Compose)
   - url: http://localhost:3000/api
     description: Direct backend (development)
 
@@ -164,6 +164,18 @@ components:
       properties:
         email: { type: string, format: email }
         password: { type: string }
+    RefreshRequest:
+      type: object
+      required: [id_token]
+      properties:
+        id_token:
+          type: string
+          description: |
+            The caller's current bearer token. It is normally already expired —
+            that is the normal case, not an error. The signature, issuer and
+            audience are verified; `exp` is deliberately NOT checked, because
+            the token's only job here is to identify which server-side refresh
+            session to rotate. Never read identity claims from the raw body.
     AuthResponse:
       type: object
       required: [access_token, token_type, user]
@@ -2577,6 +2589,40 @@ paths:
       responses:
         '204':
           description: Logged out
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Exchange an expired session for a fresh token
+      operationId: refresh
+      description: |
+        Rotates the server-side refresh session identified by the submitted
+        token's `jti` and returns a new one.
+
+        The refresh token never leaves the backend: it is held hashed, keyed by
+        the `jti` of the id_token handed to the client, and re-keyed to the new
+        `jti` on every call. Rotation is mandatory — the old token is consumed,
+        so replaying a previously used id_token fails with 401.
+
+        Callers must serialise this: concurrent 401s should share one in-flight
+        refresh, or all but the first will fail.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RefreshRequest' }
+      responses:
+        '200':
+          description: Refreshed — a new access_token for the same user
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthResponse' }
+        '401':
+          description: |
+            No refresh session for this token, or the token failed signature /
+            issuer / audience verification. The client must re-authenticate.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
 
   # ─── Users ───────────────────────────────────────────────────
   /users/profile:
