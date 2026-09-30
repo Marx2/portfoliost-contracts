@@ -615,7 +615,11 @@ components:
         currency: { type: string, nullable: true, description: "ISO-4217; null when the provider does not declare one (45.2 — never guessed). PriceHistory.currency was previously non-null; plan §47 makes it nullable to match Quote/Profile. With ?currency= (plan §48.2) this is the converted output currency" }
         currencySource: { $ref: '#/components/schemas/CurrencySource', description: "How currency was determined (provider/estimated/unknown, plan §47.3)" }
         baseCurrency: { type: string, nullable: true, description: "ISO-4217 the series is natively denominated in (resolved; null when unknown). Equals currency when no conversion was applied (plan §48.2)" }
-        fxFrom: { type: string, format: date, nullable: true, description: "Earliest FX rate date covering the window; bars before it are unconverted (native baseCurrency). Null when no conversion was applied (plan §48.2)" }
+        fxFrom: { type: string, format: date, nullable: true, description: "Earliest FX rate date covering the window. §72.17 SUPERSEDES the old rule this field documented: a bar that cannot be converted is **absent from the response**, not passed through in the native baseCurrency. So when a conversion was requested this is the first row of the returned series, and the series may be shorter than the requested window. Do not reimplement the pre-§72.17 behaviour — a base-currency price under a target-currency label is how a portfolio read 85 PLN one day and ~400 the next. Null when no conversion was applied." }
+        unconvertedDates:
+          type: array
+          items: { type: string, format: date }
+          description: "Dates in the REQUESTED window that were dropped because no FX rate existed for the pair (§72.10). Present only when ?currency= asked for a conversion; empty when nothing was dropped, absent when no conversion was applied. A caller can therefore tell a short series from a truncated one instead of inferring it — the gaps are scattered as well as prefixed, so `fxFrom` alone cannot express them."
     SearchResult:
       type: object
       properties:
@@ -962,7 +966,11 @@ components:
           type: string
           description: "ISO-4217 currency of the closes — the native trading currency, or the ?currency= target when converted (plan §48.2)"
         baseCurrency: { type: string, nullable: true, description: "ISO-4217 the closes are natively denominated in (resolved; null when unknown). Equals currency when no conversion was applied (plan §48.2)" }
-        fxFrom: { type: string, format: date, nullable: true, description: "Earliest FX rate date covering the window; bars before it are unconverted (native baseCurrency). Null when no conversion was applied (plan §48.2)" }
+        fxFrom: { type: string, format: date, nullable: true, description: "Earliest FX rate date covering the window. §72.17 SUPERSEDES the old rule this field documented: a bar that cannot be converted is **absent from the response**, not passed through in the native baseCurrency. So when a conversion was requested this is the first row of the returned series, and the series may be shorter than the requested window. Do not reimplement the pre-§72.17 behaviour — a base-currency price under a target-currency label is how a portfolio read 85 PLN one day and ~400 the next. Null when no conversion was applied." }
+        unconvertedDates:
+          type: array
+          items: { type: string, format: date }
+          description: "Dates in the REQUESTED window whose bars were dropped because no FX rate existed for the pair (§72.10). Present only when ?currency= asked for a conversion; empty when nothing was dropped, absent when no conversion was applied. Lets a caller distinguish a short series from a truncated one instead of inferring it — the dropped bars are scattered as well as prefixed, so `fxFrom` alone cannot express them."
         dates:
           type: array
           items: { type: string, format: date }
