@@ -2171,6 +2171,37 @@ components:
               error: { type: string }
               message: { type: string }
         syncRun: { $ref: '#/components/schemas/SyncRun' }
+        # §69.3 — which portfolios this import touched, and how many rows landed in
+        # each. The re-backfill itself is unchanged (§69.3 enqueues a full rebuild
+        # per touched portfolio), but it was **invisible afterwards**: the handler
+        # computed the set, logged a count to stderr, and discarded it. So the
+        # operator could not answer "did my re-import actually reach IKE Beata?"
+        # except by waiting for the chart to change.
+        #
+        # `rowCount` counts rows that INSERTED, not rows submitted. A batch of 500
+        # already-present rows touched nothing and re-backfills nothing, and
+        # reporting 500 there would make the idempotency path look like a rebuild.
+        affectedPortfolios:
+          type: array
+          description: |
+            Portfolios whose history this import changed, each with the number of
+            rows inserted into it. Empty/absent when the batch inserted nothing.
+            This is the set a full re-backfill was queued for, so it is also the
+            set to look at when a chart looks stale after an import.
+          items:
+            type: object
+            required: [portfolioId, rowCount]
+            properties:
+              portfolioId: { type: string, format: uuid }
+              name: { type: string, nullable: true, description: Portfolio name at import time — an operator reading a log wants the name, not the uuid. }
+              rowCount: { type: integer, description: Rows INSERTED into this portfolio by this batch. }
+        backfillQueued:
+          type: boolean
+          description: |
+            Whether a re-backfill was enqueued. Distinguishes "nothing changed, so
+            nothing to rebuild" (false) from "rebuild queued but the queue is
+            backed up" — which the caller can then read off
+            `portfolio_backfill_metadata` instead of guessing from a log line.
     SyncRun:
       type: object
       required: [id, externalSource, spreadsheetId, sheet, status, insertedCashTx, insertedPtx, skipped]
