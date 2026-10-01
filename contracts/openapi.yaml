@@ -1507,11 +1507,37 @@ components:
         # Non-empty → the `value` series is a *partial* sum (silently
         # under-reported); the SPA should flag it instead of presenting a wrong
         # total. Absent/null = every held symbol priced.
+        #
+        # §72.30 — WINDOW-WIDE, not last-day: every symbol held on any day of the
+        # window that lacked a bar on at least one such day. It says the stored
+        # HISTORY is a partial sum, which is NOT the same claim as "the value you
+        # are looking at right now is short". See `heldGapSymbols` for that.
         gapSymbols:
           type: array
           nullable: true
           items:
             type: string
+        # §72.30 — the subset of `gapSymbols` that is STILL HELD on the window's
+        # last day. Non-empty means the LATEST stored point is itself a partial
+        # sum, which is the claim a user reading the current value needs.
+        #
+        # Added because the two were conflated and PROD showed the cost: the SPA
+        # rendered "Value excludes N positions without price history" from the
+        # window-wide list, and on 2026-10-01 three of the four flagged portfolios
+        # (Crypto 1, IKE Beata 7, IKE Marek 6) had EVERY flagged symbol already
+        # closed — the current value was complete and the banner claimed otherwise.
+        # `heldGapSymbols` is empty for all three; only Rach. rejestrowy PKO BP
+        # (ROD0335) was a real current gap.
+        heldGapSymbols:
+          type: array
+          nullable: true
+          items:
+            type: string
+          description: >-
+            gapSymbols still held on the window's last day. Non-empty ⇒ the latest
+            stored value excludes them. Empty while `gapSymbols` is non-empty ⇒ the
+            history is a partial sum but the current value is complete, and the UI
+            must say that instead of "value is short".
     PortfolioSnapshot:
       type: object
       properties:
