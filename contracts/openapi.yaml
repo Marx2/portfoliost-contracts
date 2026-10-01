@@ -1475,6 +1475,24 @@ components:
                   # legs), same currency as `value` — the "invested" line the
                   # performance chart overlays so value − invested = profit.
                   invested: { type: number, nullable: true }
+                  # §78.5 — base-currency COST of positions held on this day that
+                  # have NO price. `value` already excludes them, because a
+                  # held-but-unpriced row contributes 0 to the sum while its cash
+                  # leg has been deducted. That is correct arithmetic and a
+                  # completely misleading chart: PROD showed IKE Marek losing
+                  # 76.1% on 2021-11-09 when it had in fact bought 5,717.65 of
+                  # government bonds that every price provider 404s on.
+                  #
+                  # **This is the only place the withheld amount exists**, and it
+                  # is per-day because the symptom is a step on a specific date —
+                  # a window total cannot place it. A UI that shows `value` alone
+                  # is showing a series with a hole in it and calling it a return.
+                  #
+                  # Absent = not measured (a row written before the column
+                  # existed). Do NOT default it to 0 on read: the column's own
+                  # default is 0, so that reading would claim "nothing withheld"
+                  # for exactly the portfolios that most need the warning.
+                  unpricedValue: { type: number }
                   cumulativeTwr: { type: number }
                   cumulativeMwr: { type: number }
                   cumulativeSimple: { type: number }
