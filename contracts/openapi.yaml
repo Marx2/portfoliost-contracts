@@ -1493,6 +1493,20 @@ components:
                   # default is 0, so that reading would claim "nothing withheld"
                   # for exactly the portfolios that most need the warning.
                   unpricedValue: { type: number }
+                  # §72.31 — base-currency COST of positions whose price on this day
+                  # is a CARRIED-FORWARD close rather than a real bar for this day,
+                  # where the market was open. Without this, "partial on which
+                  # days" is not answerable from anything: the grid carry-forwards,
+                  # so the value *looks* complete. Measured on PROD — Crypto reported
+                  # `gapSymbols: ["BTC-USD"]` and 24 coverage days while
+                  # `unpricedValue` was 0 on all 1,690 of them, because carry-forward
+                  # means a price exists.
+                  #
+                  # Market closures are EXCLUDED. Carry-forward across a closure is
+                  # what the grid is for, and counting it would put ~29% of every
+                  # series in this field and bury the real holes. Same predicate as
+                  # `fxCoverageHoles`, so the two cannot disagree.
+                  carriedValue: { type: number }
                   cumulativeTwr: { type: number }
                   cumulativeMwr: { type: number }
                   cumulativeSimple: { type: number }
