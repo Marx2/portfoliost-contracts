@@ -1153,6 +1153,13 @@ components:
         totalInvested: { type: number }
         currentValue: { type: number }
         isPublic: { type: boolean }
+        # §87.5 — UI-ONLY per-portfolio switch. It pre-ticks the "also create a cash
+        # transaction" checkbox on the buy/sell form so the box reflects what will
+        # actually happen. It deliberately does NOT govern the sheet import: that
+        # path uses its own hardcoded kontо list (portfoliost-sheets-sync
+        # ALWAYS_CASH_LEG), and an imported AU=0 trade on a portfolio with this ON
+        # still imports with no cash row. Two independent mechanisms, on purpose.
+        cashLegOnTrade: { type: boolean }
         isMarginEnabled: { type: boolean }
         marginRate: { type: number, nullable: true }
         maintenanceMarginRate: { type: number, nullable: true }
@@ -1176,6 +1183,8 @@ components:
         strategy: { type: string }
         currency: { type: string }
         isPublic: { type: boolean }
+        # §87.5 — same UI-only meaning as on Portfolio; PATCH reuses this schema.
+        cashLegOnTrade: { type: boolean }
     PortfolioTotalMetrics:
       description: |
         The dashboard headline aggregate, all amounts in `baseCurrency`.
