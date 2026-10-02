@@ -1419,6 +1419,11 @@ components:
         afterHoursChangePercent: { type: number, nullable: true }
         metrics: { type: object, additionalProperties: true }
         displayCurrency: { type: string }
+        # §83.5 — the owning portfolio's name, for the all-portfolios list only.
+        # Nullable (not absent-from-schema) so `/portfolios/{id}/positions` keeps
+        # satisfying `Position` unchanged: a per-portfolio page does not need to
+        # label every row with the portfolio it is already entirely about.
+        portfolioName: { type: string, nullable: true }
         logo: { type: string, nullable: true }
         labels:
           type: array
@@ -3608,6 +3613,36 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/HeldStocks' }
+  /portfolios/positions:
+    get:
+      tags: [Portfolios]
+      summary: Open positions across all portfolios
+      description: >-
+        Every OPEN position the identity holds, across every one of its
+        portfolios, each carrying `portfolioName`.
+
+        Distinct from `/portfolios/held-stocks`, which aggregates BY SYMBOL and
+        so cannot answer "which portfolio is this row from" — the question the
+        cumulative Performance tab's performer cards exist to answer, since the
+        same ticker can be held in two portfolios with very different results.
+        Unlike `/portfolios/{id}/positions` it needs no id, and it deliberately
+        returns no portfolio-specific derived state.
+
+        `portfolioName` is null on the per-portfolio route, which keeps
+        satisfying the same `Position` schema unchanged.
+      operationId: getAllPositions
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Positions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  positions:
+                    type: array
+                    items: { $ref: '#/components/schemas/Position' }
   /portfolios/shares:
     get:
       tags: [Portfolios]
