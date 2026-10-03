@@ -500,6 +500,121 @@ components:
         state: { type: string, nullable: true }
         employeeTotal: { type: number, nullable: true }
         ceo: { type: string, nullable: true }
+        keyFacts:
+          oneOf:
+            - $ref: '#/components/schemas/StockKeyFacts'
+            - $ref: '#/components/schemas/EtfKeyFacts'
+            - $ref: '#/components/schemas/FundKeyFacts'
+            - $ref: '#/components/schemas/CryptoKeyFacts'
+            - $ref: '#/components/schemas/BondKeyFacts'
+            - $ref: '#/components/schemas/CorpBondKeyFacts'
+          nullable: true
+          description: >-
+            Per-asset-class key facts, discriminated by `kind` (plan §86). Null
+            when the provider tier has nothing class-specific to say for this
+            symbol. `kind` is deliberately redundant with `assetType`:
+            `assetType` is the SCREAMING_CASE contract enum and is null when the
+            symbol is missing from the local reference table, whereas `kind` is
+            non-null whenever `keyFacts` is present, which is what makes the union
+            discriminable. The two are not merged.
+    StockKeyFacts:
+      type: object
+      description: >-
+        Equity-only key facts. Every field is a relocation of a value already on
+        the profile — no new upstream call (§86.7).
+      required: [kind]
+      properties:
+        kind: { type: string, const: stock, description: "Discriminant; always `stock`." }
+        sector: { type: string, nullable: true, description: "GICS sector. Null for an unsynced symbol rather than guessed." }
+        industry: { type: string, nullable: true, description: "GICS industry." }
+        employees: { type: number, nullable: true, description: "Employee total; null when the provider does not carry it." }
+        ceo: { type: string, nullable: true, description: "Provider string, verbatim." }
+        ipo: { type: string, nullable: true }
+        sharesOutstanding: { type: number, nullable: true }
+        marketCap: { type: number, nullable: true, description: "In `marketCapCurrency`." }
+    EtfKeyFacts:
+      type: object
+      description: >-
+        One field, and it is a row the backend already fills today and the UI
+        discarded: `ticker_reference.etf_category` (§86).
+      required: [kind]
+      properties:
+        kind: { type: string, const: etf, description: "Discriminant; always `etf`." }
+        category: { type: string, nullable: true, description: "e.g. `Equity`, `Fixed Income`; null when the reference row carries none." }
+    FundKeyFacts:
+      type: object
+      required: [kind]
+      description: >-
+        One field, on purpose. The local fund reference carries name + aliases
+        only — there is no manager, category type, OPL/TER, risk class or
+        recommended holding period anywhere in the stack, so the page says so
+        rather than implying coverage. The TFI detail importer that would fix
+        this is recorded as follow-up (§86.10).
+      properties:
+        kind: { type: string, const: fund, description: "Discriminant; always `fund`." }
+        categoryCode: { type: string, nullable: true, description: "ANALIZY listing code; null for a `TFI::` reference key, which carries none." }
+    CryptoKeyFacts:
+      type: object
+      description: >-
+        Exactly what the one configured crypto-search provider returns (§86).
+        Market cap, rank, ATH and ATL are **not** declared as nullable fields:
+        they are unavailable from the provider, which is a different statement
+        from "we fetch it and it happens to be empty".
+      required: [kind]
+      properties:
+        kind: { type: string, const: crypto, description: "Discriminant; always `crypto`." }
+        name: { type: string, nullable: true }
+        exchange: { type: string, nullable: true, description: "Provider venue code; constant in practice for the current provider." }
+        icoDate: { type: string, format: date, nullable: true }
+        circulatingSupply: { type: number, nullable: true, description: "Null, never 0, when the provider does not carry it." }
+        totalSupply: { type: number, nullable: true, description: "Null, never 0, when the provider does not carry it." }
+    BondKeyFacts:
+      type: object
+      description: >-
+        Polish retail savings bond. Deliberately a separate schema from
+        `CorpBondKeyFacts`: the two field sets are disjoint apart from maturity
+        and nominal, and one schema with fourteen nullable fields would make
+        every reader know which half applies (§86).
+      required: [kind]
+      properties:
+        kind: { type: string, const: bond, description: "Discriminant; always `bond`." }
+        seriesCode: { type: string, nullable: true }
+        issueDate: { type: string, format: date, nullable: true }
+        maturityDate: { type: string, format: date, nullable: true }
+        termMonths: { type: number, nullable: true, description: "0 is a real value, not a missing one." }
+        rateRule: { type: string, nullable: true, description: "`fixed` | `cpi_12m+margin` | `nbp_ref+margin`; determines what `margin` means." }
+        margin:
+          type: number
+          nullable: true
+          description: >-
+            Overloaded, and the label depends on `rateRule` (§86): under `fixed`
+            it **is** the flat annual rate, under `cpi_12m+margin` it is the
+            inflation add-on, under `nbp_ref+margin` the NBP add-on. Never render
+            it as "Margin" without switching on `rateRule`.
+        redemptionFee: { type: number, nullable: true, description: "Fee `b`, in the quote currency." }
+        nominal: { type: number, nullable: true }
+    CorpBondKeyFacts:
+      type: object
+      description: >-
+        Catalyst corporate bond (obligacje.pl). `nominalValue` and
+        `currentRate` are numbers here even though the provider sends strings
+        (`"100.0"`, `"7.83%"`): the unit is stripped in the translator, with a
+        guard that yields null rather than NaN. `secured` and `status` stay
+        strings — they are provider text rendered verbatim, never translated
+        (§86).
+      required: [kind]
+      properties:
+        kind: { type: string, const: corp_bond, description: "Discriminant; always `corp_bond`." }
+        issuer: { type: string, nullable: true, description: "Verbatim." }
+        series: { type: string, nullable: true }
+        market: { type: string, nullable: true }
+        status: { type: string, nullable: true, description: "Verbatim, e.g. `Notowane`." }
+        nominalValue: { type: number, nullable: true }
+        nominalCurrency: { type: string, nullable: true, description: "ISO-4217." }
+        secured: { type: string, nullable: true, description: "Provider's Polish boolean string (`NIE`), verbatim — never mapped to a boolean." }
+        couponType: { type: string, nullable: true, description: "Verbatim, carries its own embedded margin for variable-rate bonds." }
+        currentRate: { type: number, nullable: true, description: "Percent as a number (7.83), never the raw `\"7.83%\"`." }
+        maturityDate: { type: string, format: date, nullable: true }
     InstrumentMetrics:
       type: object
       properties:
