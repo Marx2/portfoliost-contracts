@@ -1966,6 +1966,11 @@ components:
         per-share gross dividend, `quantity × price` is the gross total, `taxes`
         is the withholding tax, and `totalAmount` is the **net** (gross − taxes).
         BUY/SELL rows keep `totalAmount = quantity × price + fees`.
+        `TRANSFER_OUT`/`TRANSFER_IN` rows are an in-kind movement of the
+        instrument between portfolios: `price` is the source lot's cost carried
+        over unchanged, `totalAmount` is informational, `realizedGainLoss` is
+        absent because nothing was disposed of, and the row has **no cash
+        effect and is not an external flow**. It must not be read as a trade.
       allOf:
         - $ref: '#/components/schemas/FeeFxFields'
         - type: object
@@ -2313,7 +2318,27 @@ components:
           required: [portfolioId, type, instrumentSymbol, quantity, price, currency]
           properties:
             portfolioId: { type: string, format: uuid }
-            type: { type: string, enum: [BUY, SELL, DIVIDEND, EXPIRATION] }
+            type:
+              type: string
+              enum: [BUY, SELL, DIVIDEND, EXPIRATION, TRANSFER_OUT, TRANSFER_IN]
+              description: >-
+                `TRANSFER_OUT` moves an instrument, unchanged, out of this
+                portfolio to another one — a real in-kind (delivery-versus-
+                payment-free) transfer between brokers. It is NOT a sale: no
+                realised P/L is booked and no cash moves. `TRANSFER_IN` is its
+                receiving leg. Send only `TRANSFER_OUT`; the receiving leg is
+                derived by the server, one row per source lot drawn FIFO, each
+                carrying that lot's own price. `quantity` on such a row is the
+                quantity to move; `price` is the source lot's cost and is
+                determined server-side from the FIFO draw, not supplied by the
+                caller.
+            toPortfolioName:
+              type: string
+              nullable: true
+              description: >-
+                Required iff `type` is `TRANSFER_OUT`; must exist and differ
+                from the source portfolio. The receiving portfolio takes the
+                instrument at the source lot's cost basis.
             instrumentSymbol: { type: string }
             instrumentName: { type: string, nullable: true }
             assetType: { type: string, default: STOCK }
