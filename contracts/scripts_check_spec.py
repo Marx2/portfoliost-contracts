@@ -75,4 +75,50 @@ for schema, fields in required.items():
         print(f"{schema} is missing {missing}", file=sys.stderr)
         sys.exit(1)
 
-print("openapi.yaml OK: parses, no duplicate keys, §68/§70 fields present")
+# 4. the in-kind transfer types, and the field that carries their counterparty.
+#    A transfer is a position movement with no cash effect; if it is ever dropped
+#    from this enum the import rejects the row at the Zod layer, well away from
+#    the spec that is supposed to describe it.
+schemas = doc.get("components", {}).get("schemas", {})
+tx_enum = (
+    schemas.get("ImportPortfolioTx", {})
+    .get("allOf", [{}])[1]
+    .get("properties", {})
+    .get("type", {})
+    .get("enum", [])
+)
+for value in ("TRANSFER_OUT", "TRANSFER_IN"):
+    if value not in tx_enum:
+        print(
+            f"ImportPortfolioTx.type is missing {value} (has {tx_enum})",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+tx_props = schemas.get("ImportPortfolioTx", {}).get("allOf", [{}])[1].get("properties", {})
+if "toPortfolioName" not in tx_props:
+    print("ImportPortfolioTx has no toPortfolioName", file=sys.stderr)
+    sys.exit(1)
+if not tx_props["toPortfolioName"].get("nullable"):
+    print("toPortfolioName must be nullable: it is meaningless on other types", file=sys.stderr)
+    sys.exit(1)
+
+# The read path needs no enum change: RecentCashTransaction.type stays a plain
+# string and displayLabel already exists. Asserted rather than assumed, because
+# an enum added here for the wrong reason would force every consumer to widen.
+cash_tx = schemas.get("RecentCashTransaction", {}).get("properties", {}).get("type", {})
+if "enum" in cash_tx:
+    print(
+        "RecentCashTransaction.type grew an enum; the transfer types are not "
+        "cash transactions and must not appear there",
+        file=sys.stderr,
+    )
+    sys.exit(1)
+if "displayLabel" not in schemas.get("RecentCashTransaction", {}).get("properties", {}):
+    print("RecentCashTransaction.displayLabel is missing", file=sys.stderr)
+    sys.exit(1)
+
+print(
+    "openapi.yaml OK: parses, no duplicate keys, §68/§70 fields present, "
+    "TRANSFER_OUT/TRANSFER_IN declared"
+)
