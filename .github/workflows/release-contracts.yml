@@ -92,6 +92,16 @@ jobs:
         working-directory: contracts
         run: python3 -c "import yaml; yaml.safe_load(open('openapi.yaml')); print('openapi.yaml parses OK')"
 
+      # yaml.safe_load keeps the LAST duplicate key and reports nothing, so a
+      # duplicated property reaches every consumer as a YamlParseError naming the
+      # wrong place. §41/S3 renamed `externalCapitalBasis` while `totalInvested`
+      # was becoming `capitalBasis`, which collided in three schemas and was
+      # caught here rather than in CI. This script existed for that and was not
+      # wired in.
+      - name: Validate spec has no duplicate property keys
+        working-directory: contracts
+        run: python3 scripts_check_spec.py
+
       - uses: actions/setup-node@v6
         with:
           node-version: 22
