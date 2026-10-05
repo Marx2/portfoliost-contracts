@@ -1397,7 +1397,6 @@ components:
               priceSource: { type: string, nullable: true, description: "'quote' or 'fallback' — whether the value is a live price or a remembered one." }
         capitalBasisReturnPercent: { type: number, nullable: true }
         capitalBasisReturnAmount: { type: number, nullable: true }
-        capitalBasis: { type: number, nullable: true }
         unpricedPositions:
           type: integer
           description: |
@@ -1894,7 +1893,6 @@ components:
                 returnBasis: { type: number }
                 capitalBasisReturnPercent: { type: number, nullable: true }
                 capitalBasisReturnAmount: { type: number, nullable: true }
-                capitalBasis: { type: number, nullable: true }
                 capitalBasisSource: { type: string, nullable: true }
                 capitalBasisSuppressedReason: { type: string, nullable: true }
                 capitalBasisReturnBasisKind: { type: string, nullable: true }
@@ -1946,8 +1944,9 @@ components:
         # cashValue is new, and is what makes the split explicit on the card.
         totalValue: { type: number, description: positionValue + cashValue (cash included, §68). Every amount here is converted into `currency`; a raw cross-currency sum is not acceptable. }
         cashValue: { type: number, description: This portfolio's cash balance in `currency`. May be negative on a margin account. }
-        capitalBasis: { type: number }
-        simpleReturnPercent: { type: number }
+        capitalBasis: { type: number, description: 'Capital BASIS: external contributions plus the cost of anything transferred in or out, signed. At COST — see PortfolioTotalMetrics.capitalBasis.' }
+        externalContributions: { type: number, nullable: true, description: 'Money actually put in and taken out: DEPOSIT − WITHDRAWAL only. EXCLUDES in-kind stock transfers, which move no money. The counterpart to `capitalBasis`, not a variant — conflating the two is what got ADJUSTMENT into trouble (§89.5).' }
+        simpleReturnPercent: { type: number, description: '(totalValue − capitalBasis) / capitalBasis, and 0 when capitalBasis ≤ 0 — a non-positive basis would otherwise report a signed nonsense figure.' }
         investmentReturnPercent: { type: number }
         currencyImpactPercent: { type: number }
         cumulativeDividends: { type: number }
@@ -1975,7 +1974,6 @@ components:
           description: "'quote' or 'fallback' — whether the value is a live price or a remembered one."
         capitalBasisReturnPercent: { type: number, nullable: true }
         capitalBasisReturnAmount: { type: number, nullable: true }
-        capitalBasis: { type: number, nullable: true }
         capitalBasisSource: { type: string, nullable: true }
         capitalBasisSuppressedReason: { type: string, nullable: true }
         capitalBasisReturnBasisKind: { type: string, nullable: true }
