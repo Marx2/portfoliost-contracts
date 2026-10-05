@@ -1256,7 +1256,7 @@ components:
     # ─── Portfolios ────────────────────────────────────────────
     Portfolio:
       type: object
-      required: [id, userId, name, strategy, type, totalInvested, currentValue, isPublic, isMarginEnabled, createdAt, updatedAt]
+      required: [id, userId, name, strategy, type, capitalBasis, currentValue, isPublic, isMarginEnabled, createdAt, updatedAt]
       properties:
         id: { type: string, format: uuid }
         userId: { type: string, format: uuid }
@@ -1265,7 +1265,10 @@ components:
         strategy: { type: string }
         type: { type: string }
         baseCurrency: { type: string }
-        totalInvested: { type: number }
+        # §41/S3 — RENAMED from `totalInvested`. Capital BASIS: net external
+        # contributions PLUS the cost of anything transferred in or out. Not
+        # "capital you put in" — see `externalContributions` for that.
+        capitalBasis: { type: number }
         currentValue: { type: number }
         isPublic: { type: boolean }
         # §87.5 — UI-ONLY per-portfolio switch. It pre-ticks the "also create a cash
@@ -1309,13 +1312,21 @@ components:
           instrumentsValue  positions only
           cashValue         the cash BALANCE (not a flow)
           totalValue        instrumentsValue + cashValue
-          totalInvested     net external cash flow (see below)
+          capitalBasis      capital at risk (external contributions + in-kind cost)
 
         `totalValue` previously excluded cash, which made the headline disagree
         with the portfolio cards by exactly the cash balance (§63.3). It now
         means the whole account.
+
+        §41/S3 — `totalInvested` was RENAMED to `capitalBasis`, and the
+        genuinely-external figure is now its own field, `externalContributions`.
+        The two are different questions and the old names pointed the wrong way:
+        the field named `externalCapitalBasis` reported the SAME number as
+        `totalInvested` (which includes in-kind transfers) while the function
+        named `externalCashInvested` excluded them. That mislabelling already
+        caused two wrong conclusions during the transfer work.
       type: object
-      required: [baseCurrency, instrumentsValue, cashValue, totalValue, totalInvested, portfolioBreakdown]
+      required: [baseCurrency, instrumentsValue, cashValue, totalValue, capitalBasis, portfolioBreakdown]
       properties:
         instrumentsValue:
           type: number
@@ -1326,30 +1337,46 @@ components:
         totalValue:
           type: number
           description: 'The whole account: instrumentsValue + cashValue. CHANGED in §68 — this used to be positions-only, which is what made the headline miss cash.'
-        totalInvested:
+        capitalBasis:
           type: number
           description: |
-            Net external cash flow in baseCurrency: DEPOSIT − WITHDRAWAL ± TRANSFER legs, each at its own historical rate
-            (the §62 `externalCashInvested` basis, reported by `externalCapitalBasisSource`).
+            Capital BASIS in baseCurrency: net external contributions (DEPOSIT − WITHDRAWAL,
+            each at its own historical rate) PLUS the cost of anything transferred in or out,
+            signed.
 
-            Transfers are part of this definition, not excluded. The honest
-            consequence: a transfer between two of the user's own portfolios
-            RAISES one portfolio's invested figure and LOWERS the other's. The
-            aggregate is unaffected because the legs net to zero, but a
-            per-portfolio number on this basis is not "capital you put in".
+            At COST, not market: a basis travels with the shares, so the accrued unrealised
+            gain is just `totalValue − capitalBasis` and follows whichever account holds the
+            stock. Rebasing at the transfer-date market would delete real profit.
+
+            In-kind transfers are part of this definition, not excluded — this was always the
+            stated contract and the implementation did not honour it until §41/#37. The honest
+            consequence: a transfer between two of the user's own portfolios RAISES one
+            portfolio's basis and LOWERS the other's. The aggregate is unaffected because the
+            legs net to zero, but a per-portfolio number on this basis is NOT "capital you put
+            in" — that is `externalContributions`.
+        externalContributions:
+          type: number
+          nullable: true
+          description: |
+            Money actually put in and taken out: DEPOSIT − WITHDRAWAL only, each at its own
+            historical rate. EXCLUDES in-kind stock transfers, which move no money.
+
+            The counterpart to `capitalBasis`, not a variant of it. Keep them apart —
+            conflating "money put in" with "capital at risk" is what got `ADJUSTMENT` into
+            trouble (§89.5).
         totalGainLoss:
           type: number
-          description: 'totalValue − totalInvested. Moves with §68''s change to totalValue.'
+          description: 'totalValue − capitalBasis. Moves with §68''s change to totalValue.'
         returnPercentage:
           type: number
-          description: totalGainLoss / totalInvested. Moves with §68's change to totalValue.
+          description: totalGainLoss / capitalBasis. Moves with §68's change to totalValue.
         baseCurrency: { type: string }
         portfolioBreakdown:
           type: array
           description: Per-portfolio rows. §68 — each carries the same cash/instruments split, so Σ breakdown == the headline and a card can render its own split without a second request.
           items:
             type: object
-            required: [id, name, instrumentsValue, cashValue, totalValue, totalInvested]
+            required: [id, name, instrumentsValue, cashValue, totalValue, capitalBasis]
             properties:
               id: { type: string }
               name: { type: string }
@@ -1362,15 +1389,15 @@ components:
               totalValue:
                 type: number
                 description: instrumentsValue + cashValue for this portfolio.
-              totalInvested: { type: number }
+              capitalBasis: { type: number }
               returnPercentage: { type: number }
               weight: { type: number }
               unpricedPositions: { type: integer, description: Open positions with no market value, excluded from instrumentsValue (§70). }
               priceAsOf: { type: string, format: date-time, nullable: true, description: Oldest resolved price timestamp for this portfolio's positions. }
               priceSource: { type: string, nullable: true, description: "'quote' or 'fallback' — whether the value is a live price or a remembered one." }
-        externalCapitalReturnPercent: { type: number, nullable: true }
-        externalCapitalReturnAmount: { type: number, nullable: true }
-        externalCapitalBasis: { type: number, nullable: true }
+        capitalBasisReturnPercent: { type: number, nullable: true }
+        capitalBasisReturnAmount: { type: number, nullable: true }
+        capitalBasis: { type: number, nullable: true }
         unpricedPositions:
           type: integer
           description: |
@@ -1394,9 +1421,9 @@ components:
             Dominant price provenance — 'quote' (resolved from instruments) or 'fallback'
             (a stored price reused because instruments could not be reached). 'fallback' means
             the figure is a remembered price, not a current one.
-        externalCapitalBasisSource: { type: string, nullable: true }
-        externalCapitalSuppressedReason: { type: string, nullable: true }
-        externalCapitalReturnBasisKind: { type: string, nullable: true }
+        capitalBasisSource: { type: string, nullable: true }
+        capitalBasisSuppressedReason: { type: string, nullable: true }
+        capitalBasisReturnBasisKind: { type: string, nullable: true }
         cashBreakdown:
           type: array
           description: Per-currency cash summary (dashboard cash card)
@@ -1597,7 +1624,7 @@ components:
           type: object
           properties:
             totalValue: { type: number }
-            totalInvested: { type: number }
+            capitalBasis: { type: number }
             totalReturn: { type: number }
             totalReturnPercent: { type: number }
             simpleReturnPercent: { type: number }
@@ -1849,7 +1876,7 @@ components:
           properties:
             metrics:
               type: object
-              required: [totalReturn, totalReturnAmount, dayChange, dayChangeAmount, dayChangeDate, asOf, positionCount, openPositions, closedPositions, realizedGainLoss, unrealizedGainLoss, totalInvested, income, returnBasis]
+              required: [totalReturn, totalReturnAmount, dayChange, dayChangeAmount, dayChangeDate, asOf, positionCount, openPositions, closedPositions, realizedGainLoss, unrealizedGainLoss, capitalBasis, income, returnBasis]
               properties:
                 totalReturn: { type: number }
                 totalReturnAmount: { type: number }
@@ -1862,15 +1889,15 @@ components:
                 closedPositions: { type: integer }
                 realizedGainLoss: { type: number }
                 unrealizedGainLoss: { type: number }
-                totalInvested: { type: number }
+                capitalBasis: { type: number }
                 income: { type: number }
                 returnBasis: { type: number }
-                externalCapitalReturnPercent: { type: number, nullable: true }
-                externalCapitalReturnAmount: { type: number, nullable: true }
-                externalCapitalBasis: { type: number, nullable: true }
-                externalCapitalBasisSource: { type: string, nullable: true }
-                externalCapitalSuppressedReason: { type: string, nullable: true }
-                externalCapitalReturnBasisKind: { type: string, nullable: true }
+                capitalBasisReturnPercent: { type: number, nullable: true }
+                capitalBasisReturnAmount: { type: number, nullable: true }
+                capitalBasis: { type: number, nullable: true }
+                capitalBasisSource: { type: string, nullable: true }
+                capitalBasisSuppressedReason: { type: string, nullable: true }
+                capitalBasisReturnBasisKind: { type: string, nullable: true }
             positions:
               type: array
               items: { $ref: '#/components/schemas/PositionSummary' }
@@ -1906,7 +1933,7 @@ components:
         instrumentAvgCostBasis: { type: number }
     PortfolioSummaryMetrics:
       type: object
-      required: [currency, totalValue, cashValue, totalInvested, simpleReturnPercent, investmentReturnPercent, currencyImpactPercent, cumulativeDividends, totalDividends, positionValue, realizedGain, costBasis, unrealizedGainLoss, dayChangeAmount, dayChangePercent, dayChangeDate]
+      required: [currency, totalValue, cashValue, capitalBasis, simpleReturnPercent, investmentReturnPercent, currencyImpactPercent, cumulativeDividends, totalDividends, positionValue, realizedGain, costBasis, unrealizedGainLoss, dayChangeAmount, dayChangePercent, dayChangeDate]
       properties:
         # §66.3 — the portfolio's base currency. Every amount on this object is
         # denominated in it. It was absent, so the SPA had to guess (and did:
@@ -1919,7 +1946,7 @@ components:
         # cashValue is new, and is what makes the split explicit on the card.
         totalValue: { type: number, description: positionValue + cashValue (cash included, §68). Every amount here is converted into `currency`; a raw cross-currency sum is not acceptable. }
         cashValue: { type: number, description: This portfolio's cash balance in `currency`. May be negative on a margin account. }
-        totalInvested: { type: number }
+        capitalBasis: { type: number }
         simpleReturnPercent: { type: number }
         investmentReturnPercent: { type: number }
         currencyImpactPercent: { type: number }
@@ -1946,12 +1973,12 @@ components:
           type: string
           nullable: true
           description: "'quote' or 'fallback' — whether the value is a live price or a remembered one."
-        externalCapitalReturnPercent: { type: number, nullable: true }
-        externalCapitalReturnAmount: { type: number, nullable: true }
-        externalCapitalBasis: { type: number, nullable: true }
-        externalCapitalBasisSource: { type: string, nullable: true }
-        externalCapitalSuppressedReason: { type: string, nullable: true }
-        externalCapitalReturnBasisKind: { type: string, nullable: true }
+        capitalBasisReturnPercent: { type: number, nullable: true }
+        capitalBasisReturnAmount: { type: number, nullable: true }
+        capitalBasis: { type: number, nullable: true }
+        capitalBasisSource: { type: string, nullable: true }
+        capitalBasisSuppressedReason: { type: string, nullable: true }
+        capitalBasisReturnBasisKind: { type: string, nullable: true }
         historyCoherence:
           type: object
           properties:
@@ -3704,7 +3731,7 @@ paths:
                   name: { type: string }
                   currency: { type: string }
                   totalValue: { type: number }
-                  totalInvested: { type: number }
+                  capitalBasis: { type: number }
   /portfolios/merged:
     get:
       tags: [Portfolios]
