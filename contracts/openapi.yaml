@@ -2519,6 +2519,7 @@ components:
         symbol: { type: string }
         factor: { type: number }
         effectiveDate: { type: string, format: date }
+        source: { type: string, description: "Event provenance, for example openst:fmp or admin" }
     ApplySplitResponse:
       type: object
       required: [updatedTransactions, affectedPortfolios]
