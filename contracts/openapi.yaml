@@ -2677,11 +2677,12 @@ components:
 
     SplitCandidate:
       type: object
-      required: [symbol, detectedAt, status]
-      description: Detected price discontinuity at the stooq/overflow boundary awaiting admin review.
+      required: [symbol, detectedAt, effectiveDate, status]
+      description: Provider-backed or heuristic split candidate. detectedAt is discovery time; effectiveDate is when the split took effect.
       properties:
         symbol:            { type: string }
         detectedAt:        { type: string, format: date }
+        effectiveDate:     { type: string, format: date, nullable: true }
         lastStooqDate:     { type: string, format: date, nullable: true }
         lastStooqClose:    { type: string, nullable: true }
         firstOverflowDate: { type: string, format: date, nullable: true }
@@ -2689,6 +2690,13 @@ components:
         ratio:             { type: string, nullable: true }
         suggestedFactor:   { type: string, nullable: true }
         suggestedRatio:    { type: string, nullable: true }
+        provider:          { type: string, nullable: true }
+        providerNumerator: { type: string, nullable: true }
+        providerDenominator: { type: string, nullable: true }
+        providerFactor:    { type: string, nullable: true }
+        providerStatus:    { type: string }
+        evidence:          { nullable: true }
+        appliedAt:         { type: string, format: date-time, nullable: true }
         status:
           type: string
           enum: [pending, applied, dismissed]
@@ -4986,7 +4994,7 @@ paths:
   /admin/market-data/split-candidates/{symbol}/apply:
     post:
       tags: [Admin]
-      summary: Apply a split adjustment factor for a symbol
+      summary: Apply a split candidate for a symbol
       operationId: applySplitCandidate
       security: [{ bearerAuth: [] }]
       parameters:
@@ -5000,9 +5008,10 @@ paths:
           application/json:
             schema:
               type: object
-              required: [factor]
+              required: [factor, effectiveDate]
               properties:
-                factor: { type: number, description: "Split adjustment factor (e.g. 0.25 for 4:1)" }
+                factor: { type: number, exclusiveMinimum: 0, description: "Quantity multiplier (e.g. 4 for 4:1 or 0.2 for 1:5)" }
+                effectiveDate: { type: string, format: date }
       responses:
         '200':
           description: Applied
@@ -5014,7 +5023,7 @@ paths:
                   ok:         { type: boolean }
                   symbol:     { type: string }
                   factor:     { type: number }
-                  detectedAt: { type: string, format: date }
+                  effectiveDate: { type: string, format: date }
 
   /admin/market-data/split-candidates/{symbol}/dismiss:
     post:
