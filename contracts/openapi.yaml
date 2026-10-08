@@ -1256,14 +1256,12 @@ components:
     # ─── Portfolios ────────────────────────────────────────────
     Portfolio:
       type: object
-      required: [id, userId, name, strategy, type, capitalBasis, currentValue, isPublic, isMarginEnabled, createdAt, updatedAt]
+      required: [id, userId, name, capitalBasis, currentValue, isPublic, isMarginEnabled, createdAt, updatedAt]
       properties:
         id: { type: string, format: uuid }
         userId: { type: string, format: uuid }
         name: { type: string }
         description: { type: string, nullable: true }
-        strategy: { type: string }
-        type: { type: string }
         baseCurrency: { type: string }
         # §41/S3 — RENAMED from `totalInvested`. Capital BASIS: net external
         # contributions PLUS the cost of anything transferred in or out. Not
@@ -1279,8 +1277,6 @@ components:
         # still imports with no cash row. Two independent mechanisms, on purpose.
         cashLegOnTrade: { type: boolean }
         isMarginEnabled: { type: boolean }
-        marginRate: { type: number, nullable: true }
-        maintenanceMarginRate: { type: number, nullable: true }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
         metrics:
@@ -1298,7 +1294,6 @@ components:
       properties:
         name: { type: string }
         description: { type: string, nullable: true }
-        strategy: { type: string }
         currency: { type: string }
         isPublic: { type: boolean }
         # §87.5 — same UI-only meaning as on Portfolio; PATCH reuses this schema.
