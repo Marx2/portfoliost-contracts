@@ -1998,7 +1998,7 @@ components:
       allOf:
         - $ref: '#/components/schemas/FeeFxFields'
         - type: object
-          required: [id, portfolioId, portfolioName, type, instrumentSymbol, instrumentName, quantity, price, fees, totalAmount, currency, priceCurrency, instrumentCurrency, assetType, isGift, synthesizedOpeningLot, executedAt, createdAt, displayCurrency, convertedTotalAmount, convertedPrice, convertedFees]
+          required: [id, portfolioId, portfolioName, type, instrumentSymbol, instrumentName, quantity, price, fees, totalAmount, currency, priceCurrency, instrumentCurrency, assetType, executedAt, createdAt, displayCurrency, convertedTotalAmount, convertedPrice, convertedFees]
           properties:
             id: { type: string, format: uuid }
             portfolioId: { type: string, format: uuid }
@@ -2019,17 +2019,24 @@ components:
             priceCurrency: { type: string }
             instrumentCurrency: { type: string }
             assetType: { type: string }
-            isGift: { type: boolean }
-            synthesizedOpeningLot: { type: boolean }
             executedAt: { type: string, format: date-time }
             createdAt: { type: string, format: date-time }
-            displayCurrency: { type: string }
+            displayCurrency:
+              type: string
+              description: Currency used to display and total the row; the owning portfolio's base currency
             convertedTotalAmount: { type: number }
             convertedPrice: { type: number }
             convertedFees: { type: number }
             convertedRealizedGainLoss: { type: number, nullable: true }
-            sector: { type: string }
-            country: { type: string }
+            sector:
+              type: string
+              nullable: true
+              description: Sector of the transaction's position (read from the position, not stored on the row)
+            country:
+              type: string
+              nullable: true
+              description: Country of the position's instrument, read from the position
+
             externalSource:
               type: string
               nullable: true
