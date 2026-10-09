@@ -1529,6 +1529,9 @@ components:
       required: [id, portfolioId, symbol, companyName, assetType, purchaseCurrency, instrumentCurrency, quantity, avgCostBasis, totalCostBasis, costBasis, realizedGainLoss, sector, industry, country, isOpen, openedAt, currentPrice, priceSource, priceAsOf, marketValue, unrealizedGainLoss, percentageChange, percentOfPortfolio, dayChange, dayChangePercent, displayCurrency]
       properties:
         id: { type: string, format: uuid }
+        # #115 — the portfolio this row is VIEWED under (the membership the list
+        # was queried by), not a single-owner column: ownership is many-to-many
+        # (a position may belong to several portfolios via position_portfolios).
         portfolioId: { type: string, format: uuid }
         symbol: { type: string }
         companyName: { type: string }
@@ -1901,6 +1904,7 @@ components:
       required: [id, portfolioId, symbol, assetType, quantity, avgCostBasis, totalCostBasis, currentPrice, marketValue, realizedGainLoss, unrealizedGainLoss, sector, industry, country, purchaseCurrency, stockCurrency, contractSize, isCfd, displayCurrency, instrumentAvgCostBasis]
       properties:
         id: { type: string, format: uuid }
+        # #115 — the portfolio this row is viewed under; ownership is many-to-many.
         portfolioId: { type: string, format: uuid }
         symbol: { type: string }
         assetType: { type: string }
