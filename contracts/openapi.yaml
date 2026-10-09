@@ -2122,7 +2122,6 @@ components:
             currency: { type: string, description: Defaults to the portfolio baseCurrency; any registry currency allowed }
             description: { type: string }
             transactionDate: { type: string }
-            paymentMethod: { type: string }
     TransferCashRequest:
       allOf:
         - $ref: '#/components/schemas/FeeFxFields'
@@ -2158,18 +2157,16 @@ components:
       allOf:
         - $ref: '#/components/schemas/FeeFxFields'
         - type: object
-          required: [id, portfolioId, type, amount, currency, status, createdAt]
+          required: [id, portfolioId, type, amount, currency, createdAt]
           properties:
             id: { type: string, format: uuid }
             portfolioId: { type: string, format: uuid }
             type: { type: string }
             amount: { type: number }
             currency: { type: string }
-            status: { type: string }
             createdAt: { type: string, format: date-time }
             description: { type: string, nullable: true }
             transactionDate: { type: string, nullable: true }
-            paymentMethod: { type: string, nullable: true }
             fees: { type: number, nullable: true }
             feesType: { type: string, nullable: true }
             toPortfolioId: { type: string, format: uuid, nullable: true }
@@ -2318,8 +2315,6 @@ components:
             currency: { type: string }
             description: { type: string, nullable: true }
             transactionDate: { type: string, format: date, nullable: true }
-            status: { type: string }
-            paymentMethod: { type: string, nullable: true }
             fees: { type: number, nullable: true }
             feesType: { type: string, enum: [fixed, pct], nullable: true }
             exchangeRate: { type: number, nullable: true }
