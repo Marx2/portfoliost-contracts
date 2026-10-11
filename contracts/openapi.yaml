@@ -3998,6 +3998,10 @@ paths:
             Filter by instrument symbol. Must be in canonical form: bare ticker
             for US listings (AAPL, SAP), Yahoo venue suffix for others (SAP.DE,
             SNT.WA). Case-insensitive exact match.
+        - name: search
+          in: query
+          schema: { type: string }
+          description: Case-insensitive partial match against instrument symbol or company name.
       responses:
         '200':
           description: Transactions
@@ -4227,6 +4231,10 @@ paths:
             Filter by instrument symbol. Must be in canonical form: bare ticker
             for US listings (AAPL, SAP), Yahoo venue suffix for others (SAP.DE,
             SNT.WA). Case-insensitive exact match.
+        - name: search
+          in: query
+          schema: { type: string }
+          description: Case-insensitive partial match against instrument symbol or company name.
       responses:
         '200':
           description: Transactions
@@ -4532,6 +4540,10 @@ paths:
           in: query
           schema: { type: string }
           description: Comma-separated label ids; AND filter (entity must have all)
+        - name: search
+          in: query
+          schema: { type: string }
+          description: Case-insensitive partial match against the linked transaction's ticker or company name.
       responses:
         '200':
           description: Cash transactions
@@ -4614,6 +4626,10 @@ paths:
           in: query
           schema: { type: string }
           description: Comma-separated label ids; AND filter (entity must have all)
+        - name: search
+          in: query
+          schema: { type: string }
+          description: Case-insensitive partial match against the linked transaction's ticker or company name.
       responses:
         '200':
           description: Recent cash transactions
