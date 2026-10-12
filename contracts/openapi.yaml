@@ -1269,6 +1269,8 @@ components:
         capitalBasis: { type: number }
         currentValue: { type: number }
         isPublic: { type: boolean }
+        isVirtual: { type: boolean, description: Portfolio is a read-only view selected by label. }
+        labelId: { type: string, format: uuid, nullable: true, description: Label selecting instruments for a virtual portfolio. }
         # §87.5 — UI-ONLY per-portfolio switch. It pre-ticks the "also create a cash
         # transaction" checkbox on the buy/sell form so the box reflects what will
         # actually happen. It deliberately does NOT govern the sheet import: that
@@ -1296,6 +1298,8 @@ components:
         description: { type: string, nullable: true }
         currency: { type: string }
         isPublic: { type: boolean }
+        isVirtual: { type: boolean, default: false }
+        labelId: { type: string, format: uuid, nullable: true }
         # §87.5 — same UI-only meaning as on Portfolio; PATCH reuses this schema.
         cashLegOnTrade: { type: boolean }
     PortfolioTotalMetrics:
