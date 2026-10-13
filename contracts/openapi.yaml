@@ -1269,8 +1269,8 @@ components:
         capitalBasis: { type: number }
         currentValue: { type: number }
         isPublic: { type: boolean }
-        isVirtual: { type: boolean, description: Portfolio is a read-only view selected by label. }
-        labelId: { type: string, format: uuid, nullable: true, description: Label selecting instruments for a virtual portfolio. }
+        isVirtual: { type: boolean, description: "Read-only view over the instruments carrying `labelId`. Always false on a casual portfolio." }
+        labelId: { type: string, format: uuid, nullable: true, description: "The label whose instruments a virtual portfolio mirrors. Always set when `isVirtual` is true; null on a casual portfolio." }
         # §87.5 — UI-ONLY per-portfolio switch. It pre-ticks the "also create a cash
         # transaction" checkbox on the buy/sell form so the box reflects what will
         # actually happen. It deliberately does NOT govern the sheet import: that
@@ -1292,14 +1292,34 @@ components:
           description: Portfolio-native cash position (plan §62)
     CreatePortfolioRequest:
       type: object
+      description: >-
+        Body for both POST /portfolios and PATCH /portfolios/{id}.
+
+        Virtual portfolios (`isVirtual: true`) are read-only views over the
+        instruments carrying `labelId` — they have no cash ledger. A virtual
+        request therefore REQUIRES `labelId` (an existing label owned by the
+        caller); a casual portfolio (the default — `isVirtual` false or absent)
+        MUST NOT carry one. A virtual create without a label is rejected 422.
+
+        Update semantics: a virtual portfolio's `cashLegOnTrade` is always
+        false, so PATCH rejects enabling the cash leg on a virtual portfolio
+        (422). PATCH also rejects an update that would leave the virtual/casual
+        state invalid — a `labelId` on a casual portfolio, or clearing a virtual
+        portfolio's `labelId` (both 422).
+
+        OpenAPI 3.0 cannot express a conditional requirement like this without
+        changing the shape every consumer compiles against, so the rule is
+        declared here and enforced server-side by the wallets zod refinement
+        and route guards. `scripts_check_spec.py` asserts these fields stay
+        declared.
       required: [name]
       properties:
         name: { type: string }
         description: { type: string, nullable: true }
         currency: { type: string }
         isPublic: { type: boolean }
-        isVirtual: { type: boolean, default: false }
-        labelId: { type: string, format: uuid, nullable: true }
+        isVirtual: { type: boolean, default: false, description: "True for a virtual portfolio; see the schema description for the label requirement." }
+        labelId: { type: string, format: uuid, nullable: true, description: "Required when `isVirtual` is true, forbidden otherwise. Null on a casual portfolio." }
         # §87.5 — same UI-only meaning as on Portfolio; PATCH reuses this schema.
         cashLegOnTrade: { type: boolean }
     PortfolioTotalMetrics:

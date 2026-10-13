@@ -118,7 +118,49 @@ if "displayLabel" not in schemas.get("RecentCashTransaction", {}).get("propertie
     print("RecentCashTransaction.displayLabel is missing", file=sys.stderr)
     sys.exit(1)
 
+# 5. the virtual-portfolio surface. OpenAPI 3.0 cannot express "isVirtual
+#    requires labelId" without changing the shape every consumer compiles
+#    against, so the conditional rule is declared in the schema description and
+#    enforced server-side. The fields themselves are still part of the contract
+#    both producers and consumers compile against, so assert they stay declared
+#    with the optionality that makes a casual portfolio legal without a label.
+portfolio = schemas.get("Portfolio", {})
+portfolio_props = portfolio.get("properties", {})
+if portfolio_props.get("isVirtual", {}).get("type") != "boolean":
+    print("Portfolio.isVirtual is missing or not a boolean", file=sys.stderr)
+    sys.exit(1)
+if not portfolio_props.get("labelId", {}).get("nullable"):
+    print(
+        "Portfolio.labelId is missing or not nullable: a casual portfolio "
+        "carries null rather than a label",
+        file=sys.stderr,
+    )
+    sys.exit(1)
+
+create = schemas.get("CreatePortfolioRequest", {})
+create_props = create.get("properties", {})
+if create_props.get("isVirtual", {}).get("default") is not False:
+    print(
+        "CreatePortfolioRequest.isVirtual must default to false: a casual "
+        "portfolio is the default and must keep creating without a label",
+        file=sys.stderr,
+    )
+    sys.exit(1)
+if not create_props.get("labelId", {}).get("nullable"):
+    print("CreatePortfolioRequest.labelId is missing or not nullable", file=sys.stderr)
+    sys.exit(1)
+create_desc = create.get("description", "")
+for phrase in ("labelId", "cashLegOnTrade"):
+    if phrase not in create_desc:
+        print(
+            f"CreatePortfolioRequest description no longer documents the "
+            f"virtual-portfolio invariant ({phrase} unmentioned); the rule is "
+            f"enforced server-side and this description is its only contract home",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
 print(
     "openapi.yaml OK: parses, no duplicate keys, §68/§70 fields present, "
-    "TRANSFER_OUT/TRANSFER_IN declared"
+    "TRANSFER_OUT/TRANSFER_IN declared, virtual-portfolio surface declared"
 )
