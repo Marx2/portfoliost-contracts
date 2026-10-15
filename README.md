@@ -30,4 +30,3 @@ Push to `main` — CI auto-bumps the patch version, commits, tags, and publishes
 
 - `.npmrc` — shared GitHub Packages registry config (both packages use `@marx2` scope)
 - `.gitignore` — shared ignore rules
-- `example-service-reference/` — original Example service API spec (reference only)
