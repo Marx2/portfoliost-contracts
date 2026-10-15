@@ -889,8 +889,8 @@ components:
         Instrument research dividend history (`history`) OR the portfolio's own
         dividend rows (`totalDividends`/`count`/`items`) — see the exposing
         endpoint. For portfolio items, gross = quantity × price, taxes is the
-        withholding tax, amount is the NET (gross − taxes) per the example-service
-        convention, and convertedAmount is amount in the display currency.
+        withholding tax, amount is the NET (gross − taxes), and convertedAmount
+        is amount in the display currency.
         The research `/dividends` endpoint always also sets `currency` +
         `currencySource` (plan §49.6, currency is never null); the portfolio
         endpoint does not.
@@ -2009,8 +2009,7 @@ components:
             issues: { type: array, items: { type: object } }
     Transaction:
       description: >-
-        A portfolio transaction row. For `type: DIVIDEND` the example-service convention
-        applies (verified against the live API 2026-09-26): `price` is the
+        A portfolio transaction row. For `type: DIVIDEND`, `price` is the
         per-share gross dividend, `quantity × price` is the gross total, `taxes`
         is the withholding tax, and `totalAmount` is the **net** (gross − taxes).
         BUY/SELL rows keep `totalAmount = quantity × price + fees`.
