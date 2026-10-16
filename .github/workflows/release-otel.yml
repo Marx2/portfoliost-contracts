@@ -1,10 +1,10 @@
-name: Release @marx2/otel
+name: Release @marx-org/otel
 
 # On every push to main that touches otel/**:
 #   1. Bump patch from latest otel-v* git tag
 #   2. Build TS helpers, commit version bump, push tag
 #   3. Create GitHub Release
-#   4. Publish to GitHub Packages (@marx2/otel)
+#   4. Publish to GitHub Packages (@marx-org/otel)
 #
 # On pull requests touching otel/**: validate only.
 
@@ -35,7 +35,7 @@ jobs:
         with:
           node-version: 22
           registry-url: https://npm.pkg.github.com
-          scope: "@marx2"
+          scope: "@marx-org"
 
       - name: Bump patch from latest otel-v* tag
         id: bump

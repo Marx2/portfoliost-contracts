@@ -5,7 +5,7 @@ Monorepo containing two independently-published `@marx2` packages:
 | Package | Description | Workflow |
 |---------|-------------|----------|
 | `contracts/` | `@marx-org/contracts` — OpenAPI spec, FX helpers, currencies | `release-contracts.yml` |
-| `otel/` | `@marx2/otel` — shared OpenTelemetry bootstrap helpers for Hono services | `release-otel.yml` |
+| `otel/` | `@marx-org/otel` — shared OpenTelemetry bootstrap helpers for Hono services | `release-otel.yml` |
 
 Each subfolder has its own `package.json`, `tsconfig.json`, semver version, and CI workflow.
 
@@ -24,7 +24,7 @@ cd otel && npm install && npm run build
 Push to `main` — CI auto-bumps the patch version, commits, tags, and publishes to GitHub Packages.
 
 - `contracts/**` changes → `@marx-org/contracts` (tagged `v*`)
-- `otel/**` changes → `@marx2/otel` (tagged `otel-v*`)
+- `otel/**` changes → `@marx-org/otel` (tagged `otel-v*`)
 
 ## Structure
 
