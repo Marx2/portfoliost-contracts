@@ -1,10 +1,10 @@
-name: Release @marx2/contracts
+name: Release @marx-org/contracts
 
 # On every push to main that touches contracts/**:
 #   1. Bump patch from latest v* git tag
 #   2. Build TS helpers, commit version bump, push tag
 #   3. Create GitHub Release
-#   4. Publish to GitHub Packages (@marx2/contracts)
+#   4. Publish to GitHub Packages (@marx-org/contracts)
 #
 # On pull requests touching contracts/**: validate only.
 
@@ -35,7 +35,7 @@ jobs:
         with:
           node-version: 22
           registry-url: https://npm.pkg.github.com
-          scope: "@marx2"
+          scope: "@marx-org"
 
       - name: Bump patch from latest git tag
         id: bump
