@@ -1,5 +1,5 @@
 {
-  "name": "@marx2/otel",
+  "name": "@marx-org/otel",
   "version": "1.0.2",
   "type": "module",
   "description": "Shared OpenTelemetry bootstrap helpers for Hono services",
